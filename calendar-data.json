@@ -1,0 +1,24 @@
+{
+  "events": [
+    {
+      "id": "event1",
+      "title": "Available Slot",
+      "start": "2025-07-26T10:00:00",
+      "end": "2025-07-26T11:00:00",
+      "advocateId": "advocate1",
+      "clientId": null,
+      "status": "available",
+      "public": true
+    },
+    {
+      "id": "event2",
+      "title": "Walk with Buddy",
+      "start": "2025-07-27T14:00:00",
+      "end": "2025-07-27T15:00:00",
+      "advocateId": "advocate1",
+      "clientId": "client1",
+      "status": "booked",
+      "public": false
+    }
+  ]
+}
