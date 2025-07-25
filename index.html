@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Advocate Portal</title>
+  <!-- Build trigger for GitHub Pages deployment -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    h1, h2 {
+      color: #1f2937;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      font-size: 16px;
+    }
+    .btn-blue {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-blue:hover {
+      background: #2563eb;
+    }
+    .btn-red {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-red:hover {
+      background: #dc2626;
+    }
+    .btn-green {
+      background: #10b981;
+      color: white;
+    }
+    .btn-green:hover {
+      background: #059669;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    .error {
+      color: #ef4444;
+      font-size: 14px;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 10px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="login" class="container">
+    <div class="card">
+      <h1>Pet Advocate Portal Login</h1>
+      <div id="login-error" class="error hidden"></div>
+      <div>
+        <label for="username">Username</label>
+        <input id="username" type="text" placeholder="Enter username" required>
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Enter password" required>
+      </div>
+      <button class="btn btn-blue" onclick="handleLogin()">Login</button>
+    </div>
+  </div>
+  <div id="admin" class="container hidden">
+    <div class="flex-between">
+      <h1>Admin Dashboard</h1>
+      <button class="btn btn-red" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Create New Pet Advocate</h2>
+        <div>
+          <label for="new-firstname">First Name</label>
+          <input id="new-firstname" type="text" placeholder="First Name" required>
+        </div>
+        <div>
+          <label for="new-lastname">Last Name</label>
+          <input id="new-lastname" type="text" placeholder="Last Name" required>
+        </div>
+        <div>
+          <label for="new-username">Username</label>
+          <input id="new-username" type="text" placeholder="Username" required>
+        </div>
+        <div>
+          <label for="new-password">Password</label>
+          <input id="new-password" type="password" placeholder="Password" required>
+        </div>
+        <button class="btn btn-blue" onclick="createPetAdvocate()">Create Pet Advocate</button>
+      </div>
+      <div class="card">
+        <h2>Schedules</h2>
+        <ul id="admin-schedules"></ul>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Service Reports</h2>
+      <ul id="admin-reports"></ul>
+    </div>
+  </div>
+  <div id="pet-advocate" class="container hidden">
+    <div class="flex-between">
+      <h1>Pet Advocate Dashboard</h1>
+      <button class="btn btn-red" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="card">
+      <h2>Your Schedules</h2>
+      <ul id="advocate-schedules"></ul>
+    </div>
+    <div class="card">
+      <h2>Submit Service Report</h2>
+      <div>
+        <label for="report-schedule">Schedule</label>
+        <select id="report-schedule" required>
+          <option value="">Select Schedule</option>
+        </select>
+      </div>
+      <div>
+        <label for="service-type">Service Type</label>
+        <select id="service-type" required>
+          <option value="Walk">Walk</option>
+          <option value="Grooming">Grooming</option>
+          <option value="Boarding">Boarding</option>
+          <option value="Training">Training</option>
+        </select>
+      </div>
+      <div>
+        <label for="service-notes">Notes</label>
+        <textarea id="service-notes" placeholder="Enter service notes" rows="4"></textarea>
+      </div>
+      <button class="btn btn-green" onclick="submitServiceReport()">Submit Report</button>
+    </div>
+    <div class="card">
+      <h2>Your Reports</h2>
+      <ul id="advocate-reports"></ul>
+    </div>
+  </div>
+  <script>
+    // Initialize data
+    function initializeData() {
+      const defaultData = {
+        users: [
+          { id: 'admin1', firstName: 'Admin', lastName: 'User', username: 'admin', password: btoa('admin123'), role: 'admin' },
+          { id: 'advocate1', firstName: 'John', lastName: 'Doe', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate' },
+        ],
+        schedules: [
+          { id: 'sch1', advocateId: 'advocate1', pet: 'Buddy', date: '2025-07-25', time: '10:00', status: 'pending' },
+        ],
+        reports: [],
+      };
+      if (!localStorage.getItem('advocateData')) {
+        localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      }
+    }
+
+    // Data access
+    function getData() {
+      return JSON.parse(localStorage.getItem('advocateData') || '{}');
+    }
+
+    function saveData(data) {
+      localStorage.setItem('advocateData', JSON.stringify(data));
+    }
+
+    // Current user
+    let currentUser = null;
+
+    // Show/hide sections
+    function showSection(sectionId) {
+      ['login', 'admin', 'pet-advocate'].forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== sectionId);
+      });
+    }
+
+    // Login
+    function handleLogin() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const data = getData();
+      const user = data.users.find(
+        u => u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
+      );
+      if (user) {
+        currentUser = user;
+        document.getElementById('login-error').classList.add('hidden');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        if (user.role === 'admin') {
+          showSection('admin');
+          renderAdmin();
+        } else {
+          showSection('pet-advocate');
+          renderPetAdvocate();
+        }
+      } else {
+        document.getElementById('login-error').textContent = 'Invalid username or password';
+        document.getElementById('login-error').classList.remove('hidden');
+      }
+    }
+
+    // Logout
+    function handleLogout() {
+      currentUser = null;
+      showSection('login');
+    }
+
+    // Create Pet Advocate
+    function createPetAdvocate() {
+      const firstName = document.getElementById('new-firstname').value;
+      const lastName = document.getElementById('new-lastname').value;
+      const username = document.getElementById('new-username').value;
+      const password = document.getElementById('new-password').value;
+      const data = getData();
+
+      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        alert('Username already exists');
+        return;
+      }
+
+      data.users.push({
+        id: `advocate${data.users.length + 1}`,
+        firstName,
+        lastName,
+        username,
+        password: btoa(password),
+        role: 'pet-advocate'
+      });
+
+      saveData(data);
+      document.getElementById('new-firstname').value = '';
+      document.getElementById('new-lastname').value = '';
+      document.getElementById('new-username').value = '';
+      document.getElementById('new-password').value = '';
+      alert('Pet Advocate created successfully');
+      renderAdmin();
+    }
+
+    // Submit service report
+    function submitServiceReport() {
+      const scheduleId = document.getElementById('report-schedule').value;
+      const serviceType = document.getElementById('service-type').value;
+      const notes = document.getElementById('service-notes').value;
+      const data = getData();
+
+      if (!scheduleId) {
+        alert('Please select a schedule');
+        return;
+      }
+
+      const schedule = data.schedules.find(s => s.id === scheduleId);
+      data.reports.push({
+        id: `rep${data.reports.length + 1}`,
+        scheduleId,
+        advocateId: currentUser.id,
+        serviceType,
+        notes,
+        timestamp: new Date().toISOString()
+      });
+
+      schedule.status = 'completed';
+      saveData(data);
+      document.getElementById('report-schedule').value = '';
+      document.getElementById('service-type').value = 'Walk';
+      document.getElementById('service-notes').value = '';
+      alert('Service report submitted');
+      renderPetAdvocate();
+    }
+
+    // Render admin dashboard
+    function renderAdmin() {
+      const data = getData();
+      const schedulesList = document.getElementById('admin-schedules');
+      const reportsList = document.getElementById('admin-reports');
+      schedulesList.innerHTML = '';
+      reportsList.innerHTML = '';
+
+      data.schedules.forEach(s => {
+        const advocate = data.users.find(u => u.id === s.advocateId);
+        schedulesList.innerHTML += `
+          <li>Pet: ${s.pet}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Date: ${s.date}, Time: ${s.time}, Status: ${s.status}</li>
+        `;
+      });
+
+      data.reports.forEach(r => {
+        const advocate = data.users.find(u => u.id === r.advocateId);
+        const schedule = data.schedules.find(s => s.id === r.scheduleId);
+        reportsList.innerHTML += `
+          <li>Service: ${r.serviceType}, Pet: ${schedule.pet}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+        `;
+      });
+    }
+
+    // Render Pet Advocate dashboard
+    function renderPetAdvocate() {
+      const data = getData();
+      const schedulesList = document.getElementById('advocate-schedules');
+      const reportsList = document.getElementById('advocate-reports');
+      const scheduleSelect = document.getElementById('report-schedule');
+      schedulesList.innerHTML = '';
+      reportsList.innerHTML = '';
+      scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
+
+      const schedules = data.schedules.filter(s => s.advocateId === currentUser.id);
+      schedules.forEach(s => {
+        schedulesList.innerHTML += `
+          <li>Pet: ${s.pet}, Date: ${s.date}, Time: ${s.time}, Status: ${s.status}</li>
+        `;
+        if (s.status !== 'completed') {
+          scheduleSelect.innerHTML += `<option value="${s.id}">Pet: ${s.pet}, ${s.date} ${s.time}</option>`;
+        }
+      });
+
+      data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
+        const schedule = data.schedules.find(s => s.id === r.scheduleId);
+        reportsList.innerHTML += `
+          <li>Service: ${r.serviceType}, Pet: ${s.pet}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+        `;
+      });
+    }
+
+    // Initialize
+    initializeData();
+    showSection('login');
+  </script>
+</body>
+</html>
