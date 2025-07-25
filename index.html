@@ -1,13 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pet Advocate Portal</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Build trigger for GitHub Pages deployment -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
   <div id="login" class="container mx-auto p-4">
@@ -69,8 +67,14 @@
         <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="createPetAdvocate()">Create Pet Advocate</button>
       </div>
       <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Schedules</h2>
-        <ul id="admin-schedules" class="space-y-2"></ul>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Master Calendar</h2>
+        <div id="admin-calendar" class="mb-4"></div>
+        <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportCalendarData()">Export Calendar Data</button>
+        <div class="mt-4">
+          <label for="import-data" class="block text-gray-700">Import Calendar Data</label>
+          <input id="import-data" type="file" accept=".json" class="w-full p-2 border border-gray-300 rounded-md">
+          <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mt-2" onclick="importCalendarData()">Import</button>
+        </div>
       </div>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mt-4">
@@ -91,13 +95,25 @@
       <h1 class="text-2xl font-bold text-gray-800">Pet Advocate Dashboard</h1>
       <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
     </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Schedule</h2>
+      <div id="advocate-calendar" class="mb-4"></div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Set Availability</h3>
+      <div class="space-y-4">
+        <div>
+          <label for="advocate-date" class="block text-gray-700">Date</label>
+          <input id="advocate-date" type="date" min="2025-07-26" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div>
+          <label for="advocate-time" class="block text-gray-700">Time</label>
+          <input id="advocate-time" type="time" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="setAvailability()">Set Availability</button>
+      </div>
+    </div>
     <div class="bg-white rounded-lg shadow-md p-6">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Onboarding Checklist</h2>
       <ul id="onboarding-list" class="space-y-2"></ul>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Schedules</h2>
-      <ul id="advocate-schedules" class="space-y-2"></ul>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mt-4">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Service Report</h2>
@@ -136,13 +152,14 @@
           { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
           { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
         ],
-        schedules: [
-          { id: 'sch1', advocateId: 'advocate1', pet: 'Buddy', date: '2025-07-25', time: '10:00', status: 'pending' },
-        ],
+        schedules: [],
         reports: [],
       };
       if (!localStorage.getItem('advocateData')) {
         localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      }
+      if (!localStorage.getItem('calendarEvents')) {
+        localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
     }
 
@@ -155,17 +172,38 @@
       localStorage.setItem('advocateData', JSON.stringify(data));
     }
 
-    // Current user
+    const CALENDAR_DATA_URL = '/calendar-data.json';
+    let calendarData = { events: [] };
     let currentUser = null;
 
-    // Show/hide sections
+    function loadCalendarData() {
+      fetch(CALENDAR_DATA_URL)
+        .then(response => response.json())
+        .then(data => {
+          calendarData = data;
+          const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+          calendarData.events = [...calendarData.events, ...localEvents];
+          renderCalendars();
+        })
+        .catch(() => {
+          calendarData.events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+          renderCalendars();
+        });
+    }
+
+    function saveLocalEvent(event) {
+      const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+      localEvents.push(event);
+      localStorage.setItem('calendarEvents', JSON.stringify(localEvents));
+      console.log(`Reminder trigger: ${event.status} ${event.id} for ${event.start}`);
+    }
+
     function showSection(sectionId) {
       ['login', 'admin', 'pet-advocate'].forEach(id => {
         document.getElementById(id).classList.toggle('hidden', id !== sectionId);
       });
     }
 
-    // Login
     function handleLogin() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
@@ -180,10 +218,10 @@
         document.getElementById('password').value = '';
         if (user.role === 'admin') {
           showSection('admin');
-          renderAdmin();
+          loadCalendarData();
         } else {
           showSection('pet-advocate');
-          renderPetAdvocate();
+          loadCalendarData();
         }
       } else {
         document.getElementById('login-error').textContent = 'Invalid username or password';
@@ -191,13 +229,11 @@
       }
     }
 
-    // Logout
     function handleLogout() {
       currentUser = null;
       showSection('login');
     }
 
-    // Create Pet Advocate
     function createPetAdvocate() {
       const firstName = document.getElementById('new-firstname').value;
       const lastName = document.getElementById('new-lastname').value;
@@ -241,7 +277,6 @@
       renderAdmin();
     }
 
-    // Update onboarding status
     function updateOnboarding(userId, task) {
       const data = getData();
       const user = data.users.find(u => u.id === userId);
@@ -249,14 +284,10 @@
         user.onboarding[task] = !user.onboarding[task];
         saveData(data);
         renderAdmin();
-        // Trigger IFTTT/Zapier (placeholder: log to console; requires webhook for real integration)
         console.log(`Onboarding task '${task}' for user ${userId} set to ${user.onboarding[task]}`);
-        // To integrate with IFTTT/Zapier, set up a webhook in your IFTTT/Zapier account and use fetch() here, e.g.:
-        // fetch('https://your-webhook-url', { method: 'POST', body: JSON.stringify({ userId, task, status: user.onboarding[task] }) });
       }
     }
 
-    // Update password
     function updatePassword(userId) {
       const newPassword = prompt(`Enter new password for user ${userId}:`);
       if (newPassword) {
@@ -265,14 +296,13 @@
         if (user) {
           user.password = btoa(newPassword);
           saveData(data);
-          alert(`Password updated for user ${userId}`);
+          alert('Password updated');
         } else {
           alert('User not found');
         }
       }
     }
 
-    // Submit service report
     function submitServiceReport() {
       const scheduleId = document.getElementById('report-schedule').value;
       const serviceType = document.getElementById('service-type').value;
@@ -284,7 +314,7 @@
         return;
       }
 
-      const schedule = data.schedules.find(s => s.id === scheduleId);
+      const schedule = calendarData.events.find(e => e.id === scheduleId);
       data.reports.push({
         id: `rep${data.reports.length + 1}`,
         scheduleId,
@@ -295,6 +325,7 @@
       });
 
       schedule.status = 'completed';
+      saveLocalEvent(schedule);
       saveData(data);
       document.getElementById('report-schedule').value = '';
       document.getElementById('service-type').value = 'Walk';
@@ -303,7 +334,71 @@
       renderPetAdvocate();
     }
 
-    // Export to CSV
+    function setAvailability() {
+      const date = document.getElementById('advocate-date').value;
+      const time = document.getElementById('advocate-time').value;
+      if (!date || !time) {
+        alert('Please select a date and time');
+        return;
+      }
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title: 'Available Slot',
+        start,
+        end: end.toISOString(),
+        advocateId: currentUser.id,
+        clientId: null,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      alert('Availability set');
+      document.getElementById('advocate-date').value = '';
+      document.getElementById('advocate-time').value = '';
+      renderPetAdvocate();
+    }
+
+    function exportCalendarData() {
+      try {
+        const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const blob = new Blob([JSON.stringify({ events: localEvents }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'calendar-data.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        alert('Failed to export calendar data: ' + error.message);
+      }
+    }
+
+    function importCalendarData() {
+      const fileInput = document.getElementById('import-data');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select a file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          localStorage.setItem('calendarEvents', JSON.stringify(importedData.events));
+          loadCalendarData();
+          alert('Calendar data imported successfully');
+        } catch (err) {
+          alert('Invalid JSON data');
+        }
+      };
+      reader.readAsText(file);
+    }
+
     function exportToCSV() {
       try {
         const data = getData();
@@ -341,32 +436,54 @@
         URL.revokeObjectURL(url);
       } catch (error) {
         alert('Failed to export CSV: ' + error.message);
-        console.error('CSV Export Error:', error);
       }
     }
 
-    // Render admin dashboard
+    function renderCalendars() {
+      if (currentUser.role === 'admin') {
+        const calendarEl = document.getElementById('admin-calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'timeGridWeek',
+          events: calendarData.events,
+          eventColor: '#ef4444',
+          headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridWeek,dayGridMonth' },
+          slotMinTime: '08:00:00',
+          slotMaxTime: '20:00:00',
+          eventClick: function(info) {
+            if (confirm(`Delete event ${info.event.title}?`)) {
+              calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
+              localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
+              calendar.refetchEvents();
+            }
+          },
+        });
+        calendar.render();
+      } else {
+        const calendarEl = document.getElementById('advocate-calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'timeGridWeek',
+          events: calendarData.events.filter(e => e.advocateId === currentUser.id),
+          eventColor: '#3b82f6',
+          headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridWeek,dayGridMonth' },
+          slotMinTime: '08:00:00',
+          slotMaxTime: '20:00:00',
+        });
+        calendar.render();
+      }
+    }
+
     function renderAdmin() {
       const data = getData();
-      const schedulesList = document.getElementById('admin-schedules');
       const reportsList = document.getElementById('admin-reports');
       const usersList = document.getElementById('admin-users');
-      schedulesList.innerHTML = '';
       reportsList.innerHTML = '';
       usersList.innerHTML = '';
 
-      data.schedules.forEach(s => {
-        const advocate = data.users.find(u => u.id === s.advocateId);
-        schedulesList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Pet: ${s.pet}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Date: ${s.date}, Time: ${s.time}, Status: ${s.status}</li>
-        `;
-      });
-
       data.reports.forEach(r => {
         const advocate = data.users.find(u => u.id === r.advocateId);
-        const schedule = data.schedules.find(s => s.id === r.scheduleId);
+        const schedule = calendarData.events.find(e => e.id === r.scheduleId);
         reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule.pet}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
         `;
       });
 
@@ -397,19 +514,15 @@
       });
     }
 
-    // Render Pet Advocate dashboard
     function renderPetAdvocate() {
       const data = getData();
-      const schedulesList = document.getElementById('advocate-schedules');
       const reportsList = document.getElementById('advocate-reports');
       const onboardingList = document.getElementById('onboarding-list');
       const scheduleSelect = document.getElementById('report-schedule');
-      schedulesList.innerHTML = '';
       reportsList.innerHTML = '';
       onboardingList.innerHTML = '';
       scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
 
-      // Render onboarding checklist
       const tasks = [
         { key: 'proposal', label: 'Proposal Completed' },
         { key: 'backgroundCheck', label: 'Background Check Completed' },
@@ -420,26 +533,22 @@
       tasks.forEach(task => {
         const status = currentUser.onboarding?.[task.key] ? task.label : `${task.label.split(' ')[0]} Pending`;
         onboardingList.innerHTML += `
-          <li class="p-2 border-b border-gray-200 ${currentUser.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
+          <li class="p-2 border-b border-gray-200 ${currentUser?.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
         `;
       });
 
-      const schedules = data.schedules.filter(s => s.advocateId === currentUser.id);
+      const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status !== 'completed');
       schedules.forEach(s => {
-        schedulesList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Pet: ${s.pet}, Date: ${s.date}, Time: ${s.time}, Status: ${s.status}</li>
-        `;
-        if (s.status !== 'completed') {
-          scheduleSelect.innerHTML += `<option value="${s.id}">Pet: ${s.pet}, ${s.date} ${s.time}</option>`;
-        }
+        scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${s.start}</option>`;
       });
 
       data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
-        const schedule = data.schedules.find(s => s.id === r.scheduleId);
+        const schedule = calendarData.events.find(e => e.id === r.scheduleId);
         reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule.pet}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title}, Time: ${r.notes}, ${r.timestamp}</li>
         `;
       });
+      renderCalendars();
     }
 
     // Initialize
