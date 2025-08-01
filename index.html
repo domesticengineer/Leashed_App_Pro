@@ -7,9 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <style>
-    .fc-event { font-size: 14px !important; }
-    .fc .fc-timegrid-slot { height: 2em; }
-    .fc .fc-daygrid-day { height: 100px; }
+    .fc-event { font-size: 16px !important; font-weight: 500; }
+    .fc .fc-timegrid-slot { height: 2.5em; }
+    .fc .fc-daygrid-day { height: 120px; }
+    .fc-event-main { padding: 4px; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
@@ -124,6 +125,7 @@
             </div>
             <button class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600" onclick="addClientRequest()">Add Client Request</button>
             <button class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 ml-2" onclick="addRequestedEvent()">Add Sample Requested Event</button>
+            <button class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 ml-2" onclick="resetCalendarEvents()">Reset Calendar Events</button>
           </div>
         </div>
         <div class="mt-4">
@@ -234,7 +236,19 @@
         localStorage.setItem('advocateData', JSON.stringify(defaultData));
       }
       if (!localStorage.getItem('calendarEvents')) {
-        localStorage.setItem('calendarEvents', JSON.stringify([]));
+        localStorage.setItem('calendarEvents', JSON.stringify([
+          {
+            id: `event${Date.now()}`,
+            title: 'Requested for Max',
+            start: '2025-08-01T10:00:00',
+            end: '2025-08-01T11:00:00',
+            advocateId: null,
+            clientId: 'client1',
+            status: 'available',
+            public: true,
+            color: '#f97316'
+          }
+        ]));
       }
     }
     // Data access
@@ -275,7 +289,11 @@
           console.log('Local events:', localEvents);
           const allEvents = [...data.events, ...localEvents];
           const uniqueEvents = Array.from(new Map(allEvents.map(event => [event.id, event])).values())
-            .filter(event => event.id && event.title && event.start && event.end && event.status);
+            .filter(event => {
+              const isValid = event.id && event.title && event.start && event.end && event.status;
+              if (!isValid) console.warn('Invalid event filtered out:', event);
+              return isValid;
+            });
           calendarData.events = uniqueEvents;
           console.log('Merged and validated events:', calendarData.events);
           renderCalendars();
@@ -283,7 +301,11 @@
         .catch(error => {
           console.warn('Failed to fetch JSON, using local events:', error);
           const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]')
-            .filter(event => event.id && event.title && event.start && event.end && event.status);
+            .filter(event => {
+              const isValid = event.id && event.title && event.start && event.end && event.status;
+              if (!isValid) console.warn('Invalid event filtered out:', event);
+              return isValid;
+            });
           calendarData.events = localEvents;
           console.log('Loaded local events:', calendarData.events);
           renderCalendars();
@@ -297,7 +319,8 @@
                    event.status === 'completed' ? '#6b7280' : 
                    event.advocateId ? '#3b82f6' : '#ef4444';
       if (!event.id || !event.title || !event.start || !event.end || !event.status) {
-        console.warn('Invalid event data:', event);
+        console.warn('Invalid event data, not saved:', event);
+        showToast('Error: Invalid event data');
         return;
       }
       if (existingIndex !== -1) {
@@ -308,6 +331,24 @@
       localStorage.setItem('calendarEvents', JSON.stringify(localEvents));
       console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
       loadCalendarData();
+    }
+    function resetCalendarEvents() {
+      showModal('Reset all calendar events? This will clear existing events and add a sample client request.', () => {
+        const sampleEvent = {
+          id: `event${Date.now()}`,
+          title: 'Requested for Max',
+          start: '2025-08-01T10:00:00',
+          end: '2025-08-01T11:00:00',
+          advocateId: null,
+          clientId: 'client1',
+          status: 'available',
+          public: true,
+          color: '#f97316'
+        };
+        localStorage.setItem('calendarEvents', JSON.stringify([sampleEvent]));
+        showToast('Calendar events reset with sample client request');
+        loadCalendarData();
+      });
     }
     function addRequestedEvent() {
       const data = getData();
@@ -661,7 +702,7 @@
               const props = event.extendedProps;
               return {
                 html: `<div class="flex items-center">
-                  <span class="text-xs font-semibold px-2 py-1 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-500 text-white' : props.status === 'booked' ? 'bg-green-500 text-white' : props.status === 'completed' ? 'bg-gray-500 text-white' : 'bg-red-500 text-white'}">${props.status}</span>
+                  <span class="text-sm font-semibold px-2 py-1 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-500 text-white' : props.status === 'booked' ? 'bg-green-500 text-white' : props.status === 'completed' ? 'bg-gray-500 text-white' : 'bg-red-500 text-white'}">${props.status}</span>
                   <span class="ml-2">${event.title}</span>
                 </div>`
               };
@@ -706,10 +747,12 @@
         adminCalendar.render();
       } else {
         const calendarEl = document.getElementById('advocate-calendar');
-        const filteredEvents = calendarData.events.filter(event => 
-          event.advocateId === currentUser.id || 
-          (event.status === 'available' && event.clientId && !event.advocateId)
-        );
+        const filteredEvents = calendarData.events.filter(event => {
+          const isValid = event.advocateId === currentUser.id || 
+                         (event.status === 'available' && event.clientId && !event.advocateId);
+          if (!isValid) console.log('Event filtered out:', event);
+          return isValid;
+        });
         console.log('Filtered events for advocate calendar:', filteredEvents);
         if (!advocateCalendar) {
           advocateCalendar = new FullCalendar.Calendar(calendarEl, {
@@ -739,7 +782,7 @@
               const props = event.extendedProps;
               return {
                 html: `<div class="flex items-center">
-                  <span class="text-xs font-semibold px-2 py-1 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-500 text-white' : props.status === 'booked' ? 'bg-green-500 text-white' : props.status === 'completed' ? 'bg-gray-500 text-white' : 'bg-blue-500 text-white'}">${props.status}</span>
+                  <span class="text-sm font-semibold px-2 py-1 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-500 text-white' : props.status === 'booked' ? 'bg-green-500 text-white' : props.status === 'completed' ? 'bg-gray-500 text-white' : 'bg-blue-500 text-white'}">${props.status}</span>
                   <span class="ml-2">${event.title}</span>
                 </div>`
               };
