@@ -8,6 +8,13 @@
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
+  <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <p id="modal-message" class="mb-4"></p>
+      <button id="modal-confirm" class="bg-blue-500 text-white px-4 py-2 rounded-md mr-2">Confirm</button>
+      <button id="modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Cancel</button>
+    </div>
+  </div>
   <div id="login" class="container mx-auto p-4">
     <div class="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
       <h1 class="text-2xl font-bold text-gray-800 mb-4">Pet Advocate Portal Login</h1>
@@ -31,6 +38,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Create New Pet Advocate</h2>
+        <div id="advocate-error" class="text-red-500 text-sm mb-4 hidden"></div>
         <div class="mb-4">
           <label for="new-firstname" class="block text-gray-700">First Name</label>
           <input id="new-firstname" type="text" placeholder="First Name" class="w-full p-2 border border-gray-300 rounded-md" required>
@@ -68,11 +76,34 @@
       <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Master Calendar</h2>
         <div id="admin-calendar" class="mb-4"></div>
-        <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportCalendarData()">Export Calendar Data</button>
+        <div id="calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
         <div class="mt-4">
-          <label for="import-data" class="block text-gray-700">Import Calendar Data</label>
-          <input id="import-data" type="file" accept=".json" class="w-full p-2 border border-gray-300 rounded-md">
-          <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mt-2" onclick="importCalendarData()">Import</button>
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">Add Client Request</h3>
+          <div id="client-error" class="text-red-500 text-sm mb-4 hidden"></div>
+          <div class="space-y-4">
+            <div>
+              <label for="client-title" class="block text-gray-700">Event Title</label>
+              <input id="client-title" type="text" placeholder="e.g., Requested" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="client-date" class="block text-gray-700">Date</label>
+              <input id="client-date" type="date" min="2025-07-26" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="client-time" class="block text-gray-700">Time</label>
+              <input id="client-time" type="time" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <button class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600" onclick="addClientRequest()">Add Client Request</button>
+            <button class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 ml-2" onclick="addRequestedEvent()">Add Sample Requested Event</button>
+          </div>
+        </div>
+        <div class="mt-4">
+          <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportCalendarData()">Export Calendar Data</button>
+          <div class="mt-2">
+            <label for="import-data" class="block text-gray-700">Import Calendar Data</label>
+            <input id="import-data" type="file" accept=".json" class="w-full p-2 border border-gray-300 rounded-md">
+            <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mt-2" onclick="importCalendarData()">Import</button>
+          </div>
         </div>
       </div>
     </div>
@@ -100,7 +131,9 @@
     <div class="bg-white rounded-lg shadow-md p-6 mb-4">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Schedule</h2>
       <div id="advocate-calendar" class="mb-4" style="max-width: 50%;"></div>
+      <div id="advocate-calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Set Availability</h3>
+      <div id="availability-error" class="text-red-500 text-sm mb-4 hidden"></div>
       <div class="space-y-4">
         <div>
           <label for="advocate-date" class="block text-gray-700">Date</label>
@@ -115,6 +148,7 @@
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mb-4">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Service Report</h2>
+      <div id="report-error" class="text-red-500 text-sm mb-4 hidden"></div>
       <div class="mb-4">
         <label for="report-schedule" class="block text-gray-700">Schedule</label>
         <select id="report-schedule" class="w-full p-2 border border-gray-300 rounded-md" required>
@@ -171,27 +205,100 @@
     const CALENDAR_DATA_URL = '/calendar-data.json';
     let calendarData = { events: [] };
     let currentUser = null;
+    let adminCalendar = null;
+    let advocateCalendar = null;
+    function showModal(message, onConfirm) {
+      const modal = document.getElementById('modal');
+      document.getElementById('modal-message').textContent = message;
+      document.getElementById('modal-confirm').onclick = () => {
+        onConfirm();
+        modal.classList.add('hidden');
+      };
+      document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+      modal.classList.remove('hidden');
+    }
     function loadCalendarData() {
+      console.log('Loading calendar data...');
       fetch(CALENDAR_DATA_URL)
         .then(response => response.json())
         .then(data => {
-          calendarData = data;
+          console.log('Fetched events from JSON:', data.events);
           const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-          calendarData.events = [...calendarData.events, ...localEvents];
-          console.log('Loaded calendar events:', calendarData.events); // Debug log
+          console.log('Local events:', localEvents);
+          const allEvents = [...data.events, ...localEvents];
+          const uniqueEvents = Array.from(new Map(allEvents.map(event => [event.id, event])).values())
+            .filter(event => event.id && event.title && event.start && event.end);
+          calendarData.events = uniqueEvents;
+          console.log('Merged and validated events:', calendarData.events);
           renderCalendars();
         })
-        .catch(() => {
-          calendarData.events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-          console.log('Loaded local calendar events:', calendarData.events); // Debug log
+        .catch(error => {
+          console.warn('Failed to fetch JSON, using local events:', error);
+          const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]')
+            .filter(event => event.id && event.title && event.start && event.end);
+          calendarData.events = localEvents;
+          console.log('Loaded local events:', calendarData.events);
           renderCalendars();
         });
     }
     function saveLocalEvent(event) {
       const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-      localEvents.push(event);
+      const existingIndex = localEvents.findIndex(e => e.id === event.id);
+      event.color = event.status === 'available' && event.clientId ? '#f97316' : 
+                   event.status === 'booked' ? '#22c55e' : 
+                   event.advocateId ? '#3b82f6' : '#ef4444';
+      if (existingIndex !== -1) {
+        localEvents[existingIndex] = event;
+      } else {
+        localEvents.push(event);
+      }
       localStorage.setItem('calendarEvents', JSON.stringify(localEvents));
-      console.log(`Reminder trigger: ${event.status} ${event.id} for ${event.start}`);
+      console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
+      loadCalendarData();
+    }
+    function addRequestedEvent() {
+      const event = {
+        id: `event${Date.now()}`,
+        title: 'Requested',
+        start: '2025-08-01T10:00:00',
+        end: '2025-08-01T11:00:00',
+        advocateId: null,
+        clientId: `client${Date.now()}`,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      alert('Added "Requested" event for 2025-08-01 10:00 AM');
+    }
+    function addClientRequest() {
+      const title = document.getElementById('client-title').value;
+      const date = document.getElementById('client-date').value;
+      const time = document.getElementById('client-time').value;
+      const errorDiv = document.getElementById('client-error');
+      if (!title || !date || !time) {
+        errorDiv.textContent = 'Please provide title, date, and time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title,
+        start,
+        end: end.toISOString(),
+        advocateId: null,
+        clientId: `client${Date.now()}`,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      alert(`Client request "${title}" added`);
+      document.getElementById('client-title').value = '';
+      document.getElementById('client-date').value = '';
+      document.getElementById('client-time').value = '';
     }
     function showSection(sectionId) {
       ['login', 'admin', 'pet-advocate'].forEach(id => {
@@ -201,13 +308,19 @@
     function handleLogin() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('login-error');
       const data = getData();
+      if (!username || !password) {
+        errorDiv.textContent = 'Please provide username and password';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
       const user = data.users.find(
         u => u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
       );
       if (user) {
         currentUser = user;
-        document.getElementById('login-error').classList.add('hidden');
+        errorDiv.classList.add('hidden');
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         if (user.role === 'admin') {
@@ -220,13 +333,17 @@
           renderPetAdvocate();
         }
       } else {
-        document.getElementById('login-error').textContent = 'Invalid username or password';
-        document.getElementById('login-error').classList.remove('hidden');
+        errorDiv.textContent = 'Invalid username or password';
+        errorDiv.classList.remove('hidden');
       }
     }
     function handleLogout() {
       currentUser = null;
       showSection('login');
+      if (adminCalendar) adminCalendar.destroy();
+      if (advocateCalendar) advocateCalendar.destroy();
+      adminCalendar = null;
+      advocateCalendar = null;
     }
     function createPetAdvocate() {
       const firstName = document.getElementById('new-firstname').value;
@@ -237,11 +354,19 @@
       const zip = document.getElementById('new-zip').value;
       const username = document.getElementById('new-username').value;
       const password = document.getElementById('new-password').value;
+      const errorDiv = document.getElementById('advocate-error');
       const data = getData();
-      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-        alert('Username already exists');
+      if (!firstName || !lastName || !address || !city || !state || !zip || !username || !password) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.classList.remove('hidden');
         return;
       }
+      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        errorDiv.textContent = 'Username already exists';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
       data.users.push({
         id: `advocate${data.users.length + 1}`,
         firstName,
@@ -295,11 +420,14 @@
       const scheduleId = document.getElementById('report-schedule').value;
       const serviceType = document.getElementById('service-type').value;
       const notes = document.getElementById('service-notes').value;
+      const errorDiv = document.getElementById('report-error');
       const data = getData();
       if (!scheduleId) {
-        alert('Please select a schedule');
+        errorDiv.textContent = 'Please select a schedule';
+        errorDiv.classList.remove('hidden');
         return;
       }
+      errorDiv.classList.add('hidden');
       const schedule = calendarData.events.find(e => e.id === scheduleId);
       data.reports.push({
         id: `rep${data.reports.length + 1}`,
@@ -310,6 +438,7 @@
         timestamp: new Date().toISOString()
       });
       schedule.status = 'completed';
+      schedule.color = '#22c55e'; // Update to green for completed
       saveLocalEvent(schedule);
       saveData(data);
       document.getElementById('report-schedule').value = '';
@@ -321,10 +450,13 @@
     function setAvailability() {
       const date = document.getElementById('advocate-date').value;
       const time = document.getElementById('advocate-time').value;
+      const errorDiv = document.getElementById('availability-error');
       if (!date || !time) {
-        alert('Please select a date and time');
+        errorDiv.textContent = 'Please select a date and time';
+        errorDiv.classList.remove('hidden');
         return;
       }
+      errorDiv.classList.add('hidden');
       const start = `${date}T${time}:00`;
       const end = new Date(start);
       end.setHours(end.getHours() + 1);
@@ -418,50 +550,126 @@
       }
     }
     function renderCalendars() {
-      console.log('Rendering calendars with events:', calendarData.events); // Debug log
+      console.log('Rendering calendars with events:', calendarData.events);
+      const adminWarning = document.getElementById('calendar-warning');
+      const advocateWarning = document.getElementById('advocate-calendar-warning');
+      if (!calendarData.events.length) {
+        console.warn('No events to render in calendar');
+        adminWarning.classList.remove('hidden');
+        advocateWarning.classList.remove('hidden');
+        return;
+      } else {
+        adminWarning.classList.add('hidden');
+        advocateWarning.classList.add('hidden');
+      }
       if (currentUser.role === 'admin') {
         const calendarEl = document.getElementById('admin-calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'timeGridWeek',
-          events: calendarData.events,
-          eventColor: '#ef4444',
-          headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridWeek,dayGridMonth' },
-          slotMinTime: '08:00:00',
-          slotMaxTime: '20:00:00',
-          eventClick: function(info) {
-            if (confirm(`Delete event ${info.event.title}?`)) {
-              calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
-              localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
-              calendar.refetchEvents();
-            }
-          },
-        });
-        calendar.render();
+        if (!adminCalendar) {
+          adminCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: calendarData.events.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId ? '#f97316' : 
+                                    event.status === 'booked' ? '#22c55e' : 
+                                    '#ef4444')
+            })),
+            headerToolbar: { left: 'prev,next,today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${event.start.toLocaleString()}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              showModal(`Edit or delete event "${event.title}"?`, () => {
+                const newTitle = prompt('Edit event title:', event.title);
+                const newStatus = prompt('Edit status (available/booked/completed):', event.status);
+                if (newTitle && newStatus) {
+                  event.title = newTitle;
+                  event.status = newStatus;
+                  saveLocalEvent(event);
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  alert('Event updated');
+                }
+              }, () => {
+                showModal(`Delete event ${info.event.title}?`, () => {
+                  calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
+                  localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                });
+              });
+            },
+          });
+        }
+        adminCalendar.removeAllEvents();
+        adminCalendar.addEventSource(calendarData.events.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId ? '#f97316' : 
+                                event.status === 'booked' ? '#22c55e' : 
+                                '#ef4444')
+        })));
+        adminCalendar.render();
       } else {
         const calendarEl = document.getElementById('advocate-calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'timeGridWeek',
-          events: calendarData.events,
-          eventColor: '#3b82f6',
-          headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridWeek,dayGridMonth' },
-          slotMinTime: '08:00:00',
-          slotMaxTime: '20:00:00',
-          eventClick: function(info) {
-            if (!info.event.extendedProps.advocateId && info.event.extendedProps.clientId && info.event.extendedProps.status === 'available') {
-              if (confirm(`Accept client request: ${info.event.title}?`)) {
-                const event = calendarData.events.find(e => e.id === info.event.id);
-                if (event) {
+        if (!advocateCalendar) {
+          advocateCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: calendarData.events.filter(event => 
+              event.advocateId === currentUser.id || 
+              (event.status === 'available' && event.clientId && !event.advocateId)
+            ).map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId ? '#f97316' : 
+                                    event.status === 'booked' ? '#22c55e' : 
+                                    '#3b82f6')
+            })),
+            headerToolbar: { left: 'prev,next,today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${event.start.toLocaleString()}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              if (event.advocateId === currentUser.id && event.status === 'booked') {
+                showModal(`Cancel booked event: ${info.event.title}?`, () => {
+                  event.status = 'available';
+                  event.advocateId = null;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                });
+              } else if (!info.event.extendedProps.advocateId && info.event.extendedProps.clientId && info.event.extendedProps.status === 'available') {
+                showModal(`Accept client request: ${info.event.title}?`, () => {
                   event.status = 'booked';
                   event.advocateId = currentUser.id;
                   saveLocalEvent(event);
-                  calendar.refetchEvents();
+                  advocateCalendar.refetchEvents();
                   renderPetAdvocate();
-                }
+                });
               }
-            }
-          },
-        });
-        calendar.render();
+            },
+          });
+        }
+        advocateCalendar.removeAllEvents();
+        advocateCalendar.addEventSource(calendarData.events.filter(event => 
+          event.advocateId === currentUser.id || 
+          (event.status === 'available' && event.clientId && !event.advocateId)
+        ).map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId ? '#f97316' : 
+                                event.status === 'booked' ? '#22c55e' : 
+                                '#3b82f6')
+        })));
+        advocateCalendar.render();
       }
     }
     function renderAdmin() {
@@ -474,7 +682,7 @@
         const advocate = data.users.find(u => u.id === r.advocateId);
         const schedule = calendarData.events.find(e => e.id === r.scheduleId);
         reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title || 'Unknown'}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
         `;
       });
       data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
@@ -531,7 +739,7 @@
       data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
         const schedule = calendarData.events.find(e => e.id === r.scheduleId);
         reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title}, Time: ${r.notes}, ${r.timestamp}</li>
+          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title || 'Unknown'}, Time: ${r.notes}, ${r.timestamp}</li>
         `;
       });
       renderCalendars();
