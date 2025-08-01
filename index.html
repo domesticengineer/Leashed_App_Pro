@@ -114,10 +114,6 @@
       </div>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Client Schedule Requests</h2>
-      <ul id="client-requests" class="space-y-2"></ul>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Service Report</h2>
       <div class="mb-4">
         <label for="report-schedule" class="block text-gray-700">Schedule</label>
@@ -215,7 +211,7 @@
         if (user.role === 'admin') {
           showSection('admin');
           loadCalendarData();
-          renderAdmin(); // Added to render Pet Advocates on login
+          renderAdmin();
         } else {
           showSection('pet-advocate');
           loadCalendarData();
@@ -346,16 +342,6 @@
       document.getElementById('advocate-time').value = '';
       renderPetAdvocate();
     }
-    function acceptClientRequest(eventId) {
-      const schedule = calendarData.events.find(e => e.id === eventId);
-      if (schedule) {
-        schedule.status = 'booked';
-        schedule.advocateId = currentUser.id;
-        saveLocalEvent(schedule);
-        alert('Client request accepted');
-        renderPetAdvocate();
-      }
-    }
     function exportCalendarData() {
       try {
         const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
@@ -452,11 +438,25 @@
         const calendarEl = document.getElementById('advocate-calendar');
         const calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: 'timeGridWeek',
-          events: calendarData.events.filter(e => e.advocateId === currentUser.id),
+          events: calendarData.events.filter(e => e.advocateId === currentUser.id || (!e.advocateId && e.clientId && e.status === 'available')),
           eventColor: '#3b82f6',
           headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridWeek,dayGridMonth' },
           slotMinTime: '08:00:00',
           slotMaxTime: '20:00:00',
+          eventClick: function(info) {
+            if (!info.event.extendedProps.advocateId && info.event.extendedProps.clientId && info.event.extendedProps.status === 'available') {
+              if (confirm(`Accept client request: ${info.event.title}?`)) {
+                const event = calendarData.events.find(e => e.id === info.event.id);
+                if (event) {
+                  event.status = 'booked';
+                  event.advocateId = currentUser.id;
+                  saveLocalEvent(event);
+                  calendar.refetchEvents();
+                  renderPetAdvocate();
+                }
+              }
+            }
+          },
         });
         calendar.render();
       }
@@ -505,11 +505,9 @@
       const reportsList = document.getElementById('advocate-reports');
       const onboardingList = document.getElementById('onboarding-list');
       const scheduleSelect = document.getElementById('report-schedule');
-      const clientRequestsList = document.getElementById('client-requests');
       reportsList.innerHTML = '';
       onboardingList.innerHTML = '';
       scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
-      clientRequestsList.innerHTML = '';
       const tasks = [
         { key: 'proposal', label: 'Proposal Completed' },
         { key: 'backgroundCheck', label: 'Background Check Completed' },
@@ -526,15 +524,6 @@
       const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status !== 'completed');
       schedules.forEach(s => {
         scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${s.start}</option>`;
-      });
-      const clientRequests = calendarData.events.filter(e => e.clientId && !e.advocateId && e.status === 'available');
-      clientRequests.forEach(r => {
-        clientRequestsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">
-            <span>Request: ${r.title}, ${r.start}</span>
-            <button class="bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600 ml-2 text-sm" onclick="acceptClientRequest('${r.id}')">Accept</button>
-          </li>
-        `;
       });
       data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
         const schedule = calendarData.events.find(e => e.id === r.scheduleId);
