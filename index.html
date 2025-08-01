@@ -7,21 +7,40 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <style>
-    .fc-event { font-size: 16px !important; font-weight: 500; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .fc { --fc-border-color: #e5e7eb; }
+    .fc .fc-daygrid-day-frame { padding: 4px; }
     .fc .fc-timegrid-slot { height: 2.5em; }
-    .fc .fc-daygrid-day { height: 120px; }
-    .fc-event-main { padding: 4px; }
+    .fc .fc-daygrid-day { height: 100px; }
+    .fc .fc-event { 
+      font-size: 14px !important; 
+      border-radius: 6px; 
+      padding: 4px 8px; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+      border: none !important;
+    }
+    .fc .fc-timegrid-event { min-height: 2.5em; }
+    .fc .fc-daygrid-event { 
+      font-size: 12px !important; 
+      padding: 2px 4px; 
+      margin: 2px;
+    }
+    .fc .fc-col-header-cell { background: #f9fafb; }
+    .fc .fc-daygrid-day-top { font-weight: 500; }
+    .fc .fc-timegrid-col { background: #ffffff; }
+    .fc .fc-scrollgrid { border-radius: 8px; }
+    .fc .fc-toolbar-title { font-size: 1.5rem; font-weight: 600; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
-  <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-[1000] hidden">
+  <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
     <div class="bg-white p-6 rounded-lg shadow-md">
       <p id="modal-message" class="mb-4"></p>
       <button id="modal-confirm" class="bg-blue-500 text-white px-4 py-2 rounded-md mr-2">Confirm</button>
       <button id="modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Cancel</button>
     </div>
   </div>
-  <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-[1000] hidden">
+  <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hidden">
     <span id="toast-message"></span>
   </div>
   <div id="login" class="container mx-auto p-4">
@@ -43,15 +62,6 @@
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
       <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Calendar Legend</h2>
-      <ul class="space-y-2">
-        <li><span class="inline-block w-4 h-4 bg-orange-500 mr-2"></span>Client Request (Available)</li>
-        <li><span class="inline-block w-4 h-4 bg-green-500 mr-2"></span>Booked</li>
-        <li><span class="inline-block w-4 h-4 bg-gray-500 mr-2"></span>Completed</li>
-        <li><span class="inline-block w-4 h-4 bg-blue-500 mr-2"></span>Advocate Availability</li>
-      </ul>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="bg-white rounded-lg shadow-md p-6">
@@ -93,7 +103,7 @@
       </div>
       <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Master Calendar</h2>
-        <div id="admin-calendar" class="mb-4" style="height: 600px;"></div>
+        <div id="admin-calendar" class="mb-4"></div>
         <div id="calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
         <div class="mt-4">
           <h3 class="text-lg font-semibold text-gray-800 mb-2">Add Client Request</h3>
@@ -102,18 +112,6 @@
             <div>
               <label for="client-title" class="block text-gray-700">Event Title</label>
               <input id="client-title" type="text" placeholder="e.g., Requested for Max" class="w-full p-2 border border-gray-300 rounded-md">
-            </div>
-            <div>
-              <label for="client-name" class="block text-gray-700">Client Name</label>
-              <input id="client-name" type="text" placeholder="Client Name" class="w-full p-2 border border-gray-300 rounded-md">
-            </div>
-            <div>
-              <label for="client-phone" class="block text-gray-700">Client Phone</label>
-              <input id="client-phone" type="tel" placeholder="Client Phone" class="w-full p-2 border border-gray-300 rounded-md">
-            </div>
-            <div>
-              <label for="client-email" class="block text-gray-700">Client Email</label>
-              <input id="client-email" type="email" placeholder="Client Email" class="w-full p-2 border border-gray-300 rounded-md">
             </div>
             <div>
               <label for="client-date" class="block text-gray-700">Date</label>
@@ -125,7 +123,6 @@
             </div>
             <button class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600" onclick="addClientRequest()">Add Client Request</button>
             <button class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 ml-2" onclick="addRequestedEvent()">Add Sample Requested Event</button>
-            <button class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 ml-2" onclick="resetCalendarEvents()">Reset Calendar Events</button>
           </div>
         </div>
         <div class="mt-4">
@@ -156,22 +153,13 @@
       <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Calendar Legend</h2>
-      <ul class="space-y-2">
-        <li><span class="inline-block w-4 h-4 bg-orange-500 mr-2"></span>Client Request (Available)</li>
-        <li><span class="inline-block w-4 h-4 bg-green-500 mr-2"></span>Booked by You</li>
-        <li><span class="inline-block w-4 h-4 bg-gray-500 mr-2"></span>Completed</li>
-        <li><span class="inline-block w-4 h-4 bg-blue-500 mr-2"></span>Your Availability</li>
-      </ul>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Onboarding Checklist</h2>
       <ul id="onboarding-list" class="space-y-2"></ul>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mb-4">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Schedule</h2>
-      <p class="text-gray-600 mb-4">1. View client requests (orange) and click to accept. 2. Submit service reports for your booked (green) events. 3. Set your availability below.</p>
-      <div id="advocate-calendar" class="mb-4" style="height: 600px;"></div>
+      <p class="text-gray-600 mb-4">1. View client requests (orange) and click to accept. 2. Submit service reports for booked (green) events. 3. Set your availability below.</p>
+      <div id="advocate-calendar" class="mb-4"></div>
       <div id="advocate-calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Set Availability</h3>
       <div id="availability-error" class="text-red-500 text-sm mb-4 hidden"></div>
@@ -188,7 +176,7 @@
       </div>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6 mb-4">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Service Report</h2>
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Leashed Walk Report Card</h2>
       <div id="report-error" class="text-red-500 text-sm mb-4 hidden"></div>
       <div class="mb-4">
         <label for="report-schedule" class="block text-gray-700">Schedule</label>
@@ -197,19 +185,34 @@
         </select>
       </div>
       <div class="mb-4">
-        <label for="service-type" class="block text-gray-700">Service Type</label>
-        <select id="service-type" class="w-full p-2 border border-gray-300 rounded-md" required>
-          <option value="20 Minute Walk">20 Minute Walk</option>
-          <option value="30 Minute Walk">30 Minute Walk</option>
-          <option value="60 Minute Walk">60 Minute Walk</option>
-          <option value="Pup Date">Pup Date</option>
-          <option value="Sitting">Sitting</option>
-          <option value="Boarding">Boarding</option>
+        <label for="report-pet-name" class="block text-gray-700">Pet Name</label>
+        <input id="report-pet-name" type="text" placeholder="Enter Pet Name" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-start-datetime" class="block text-gray-700">What was your start time?</label>
+        <input id="report-start-datetime" type="datetime-local" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-end-datetime" class="block text-gray-700">What was your end time?</label>
+        <input id="report-end-datetime" type="datetime-local" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-pee" class="block text-gray-700">Pee</label>
+        <select id="report-pee" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
         </select>
       </div>
       <div class="mb-4">
-        <label for="service-notes" class="block text-gray-700">Notes</label>
-        <textarea id="service-notes" placeholder="Enter service notes" rows="4" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+        <label for="report-poop" class="block text-gray-700">Poop</label>
+        <select id="report-poop" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="report-notes" class="block text-gray-700">A Note From Your Walker</label>
+        <textarea id="report-notes" placeholder="Enter notes" rows="4" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
       </div>
       <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="submitServiceReport()">Submit Report</button>
     </div>
@@ -226,9 +229,6 @@
           { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
           { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
         ],
-        clients: [
-          { id: 'client1', name: 'Jane Smith', phone: '555-123-4567', email: 'jane@example.com' }
-        ],
         schedules: [],
         reports: [],
       };
@@ -236,19 +236,7 @@
         localStorage.setItem('advocateData', JSON.stringify(defaultData));
       }
       if (!localStorage.getItem('calendarEvents')) {
-        localStorage.setItem('calendarEvents', JSON.stringify([
-          {
-            id: `event${Date.now()}`,
-            title: 'Requested for Max',
-            start: '2025-08-01T10:00:00',
-            end: '2025-08-01T11:00:00',
-            advocateId: null,
-            clientId: 'client1',
-            status: 'available',
-            public: true,
-            color: '#f97316'
-          }
-        ]));
+        localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
     }
     // Data access
@@ -279,6 +267,32 @@
       document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
       modal.classList.remove('hidden');
     }
+    function fetchWebsiteRequests() {
+      // Mock API response (replace with actual endpoint: https://domesticengineer.github.io/leashed/api/client-requests)
+      const mockWebsiteRequests = [
+        {
+          title: 'Requested for Bella',
+          start: '2025-08-02T11:00:00',
+          end: '2025-08-02T12:00:00'
+        }
+      ];
+      console.log('Automatically fetching website requests...');
+      mockWebsiteRequests.forEach(req => {
+        const event = {
+          id: `event${Date.now() + Math.floor(Math.random() * 1000)}`,
+          title: req.title,
+          start: req.start,
+          end: req.end,
+          advocateId: null,
+          clientId: `client${Date.now()}`,
+          status: 'available',
+          public: true,
+          color: '#f97316'
+        };
+        saveLocalEvent(event);
+      });
+      console.log('Website client requests fetched');
+    }
     function loadCalendarData() {
       console.log('Loading calendar data...');
       fetch(CALENDAR_DATA_URL)
@@ -289,38 +303,31 @@
           console.log('Local events:', localEvents);
           const allEvents = [...data.events, ...localEvents];
           const uniqueEvents = Array.from(new Map(allEvents.map(event => [event.id, event])).values())
-            .filter(event => {
-              const isValid = event.id && event.title && event.start && event.end && event.status;
-              if (!isValid) console.warn('Invalid event filtered out:', event);
-              return isValid;
-            });
+            .filter(event => event.id && event.title && event.start && event.end);
           calendarData.events = uniqueEvents;
           console.log('Merged and validated events:', calendarData.events);
+          fetchWebsiteRequests();
           renderCalendars();
         })
         .catch(error => {
           console.warn('Failed to fetch JSON, using local events:', error);
           const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]')
-            .filter(event => {
-              const isValid = event.id && event.title && event.start && event.end && event.status;
-              if (!isValid) console.warn('Invalid event filtered out:', event);
-              return isValid;
-            });
+            .filter(event => event.id && event.title && event.start && event.end);
           calendarData.events = localEvents;
           console.log('Loaded local events:', calendarData.events);
+          fetchWebsiteRequests();
           renderCalendars();
         });
     }
     function saveLocalEvent(event) {
       const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
       const existingIndex = localEvents.findIndex(e => e.id === event.id);
-      event.color = event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' : 
-                   event.status === 'booked' ? '#22c55e' : 
-                   event.status === 'completed' ? '#6b7280' : 
-                   event.advocateId ? '#3b82f6' : '#ef4444';
-      if (!event.id || !event.title || !event.start || !event.end || !event.status) {
-        console.warn('Invalid event data, not saved:', event);
-        showToast('Error: Invalid event data');
+      event.color = event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                    event.status === 'booked' ? '#22c55e' :
+                    event.status === 'completed' ? '#6b7280' :
+                    event.advocateId ? '#3b82f6' : '#ef4444';
+      if (!event.id || !event.title || !event.start || !event.end) {
+        console.warn('Invalid event data:', event);
         return;
       }
       if (existingIndex !== -1) {
@@ -332,58 +339,31 @@
       console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
       loadCalendarData();
     }
-    function resetCalendarEvents() {
-      showModal('Reset all calendar events? This will clear existing events and add a sample client request.', () => {
-        const sampleEvent = {
-          id: `event${Date.now()}`,
-          title: 'Requested for Max',
-          start: '2025-08-01T10:00:00',
-          end: '2025-08-01T11:00:00',
-          advocateId: null,
-          clientId: 'client1',
-          status: 'available',
-          public: true,
-          color: '#f97316'
-        };
-        localStorage.setItem('calendarEvents', JSON.stringify([sampleEvent]));
-        showToast('Calendar events reset with sample client request');
-        loadCalendarData();
-      });
-    }
     function addRequestedEvent() {
-      const data = getData();
       const event = {
         id: `event${Date.now()}`,
-        title: 'Requested for Max',
+        title: 'Requested',
         start: '2025-08-01T10:00:00',
         end: '2025-08-01T11:00:00',
         advocateId: null,
-        clientId: 'client1',
+        clientId: `client${Date.now()}`,
         status: 'available',
         public: true,
       };
       saveLocalEvent(event);
-      showToast('Added sample "Requested" event for 2025-08-01 10:00 AM');
+      showToast('Added "Requested" event for 2025-08-01 10:00 AM');
     }
     function addClientRequest() {
       const title = document.getElementById('client-title').value;
-      const name = document.getElementById('client-name').value;
-      const phone = document.getElementById('client-phone').value;
-      const email = document.getElementById('client-email').value;
       const date = document.getElementById('client-date').value;
       const time = document.getElementById('client-time').value;
       const errorDiv = document.getElementById('client-error');
-      if (!title || !name || !phone || !email || !date || !time) {
-        errorDiv.textContent = 'Please provide all fields';
+      if (!title || !date || !time) {
+        errorDiv.textContent = 'Please provide title, date, and time';
         errorDiv.classList.remove('hidden');
         return;
       }
       errorDiv.classList.add('hidden');
-      const data = getData();
-      const clientId = `client${Date.now()}`;
-      data.clients = data.clients || [];
-      data.clients.push({ id: clientId, name, phone, email });
-      saveData(data);
       const start = `${date}T${time}:00`;
       const end = new Date(start);
       end.setHours(end.getHours() + 1);
@@ -393,16 +373,13 @@
         start,
         end: end.toISOString(),
         advocateId: null,
-        clientId,
+        clientId: `client${Date.now()}`,
         status: 'available',
         public: true,
       };
       saveLocalEvent(event);
       showToast(`Client request "${title}" added`);
       document.getElementById('client-title').value = '';
-      document.getElementById('client-name').value = '';
-      document.getElementById('client-phone').value = '';
-      document.getElementById('client-email').value = '';
       document.getElementById('client-date').value = '';
       document.getElementById('client-time').value = '';
     }
@@ -522,37 +499,64 @@
         }
       }
     }
+    function formatDateTime(datetime) {
+      const d = new Date(datetime);
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${month}-${day}-${year} Start Time: ${hours}:${minutes}`;
+    }
+    function calculateDuration(startDatetime, endDatetime) {
+      const start = new Date(startDatetime);
+      const end = new Date(endDatetime);
+      const diffMs = end - start;
+      const minutes = Math.floor(diffMs / 60000);
+      return `${minutes} minutes`;
+    }
     function submitServiceReport() {
       const scheduleId = document.getElementById('report-schedule').value;
-      const serviceType = document.getElementById('service-type').value;
-      const notes = document.getElementById('service-notes').value;
+      const petName = document.getElementById('report-pet-name').value;
+      const startDatetime = document.getElementById('report-start-datetime').value;
+      const endDatetime = document.getElementById('report-end-datetime').value;
+      const pee = document.getElementById('report-pee').value;
+      const poop = document.getElementById('report-poop').value;
+      const notes = document.getElementById('report-notes').value;
       const errorDiv = document.getElementById('report-error');
       const data = getData();
-      if (!scheduleId) {
-        errorDiv.textContent = 'Please select a schedule';
+      if (!scheduleId || !petName || !startDatetime || !endDatetime || !pee || !poop) {
+        errorDiv.textContent = 'Please fill in all fields';
         errorDiv.classList.remove('hidden');
         return;
       }
       errorDiv.classList.add('hidden');
       const schedule = calendarData.events.find(e => e.id === scheduleId);
-      const client = data.clients?.find(c => c.id === schedule.clientId);
-      data.reports.push({
+      const report = {
         id: `rep${data.reports.length + 1}`,
         scheduleId,
         advocateId: currentUser.id,
-        clientId: schedule.clientId,
-        clientName: client?.name || 'Unknown',
-        serviceType,
+        petName,
+        startDatetime,
+        endDatetime,
+        duration: calculateDuration(startDatetime, endDatetime),
+        pee,
+        poop,
         notes,
         timestamp: new Date().toISOString()
-      });
+      };
+      data.reports.push(report);
       schedule.status = 'completed';
       schedule.color = '#6b7280';
       saveLocalEvent(schedule);
       saveData(data);
       document.getElementById('report-schedule').value = '';
-      document.getElementById('service-type').value = '20 Minute Walk';
-      document.getElementById('service-notes').value = '';
+      document.getElementById('report-pet-name').value = '';
+      document.getElementById('report-start-datetime').value = '';
+      document.getElementById('report-end-datetime').value = '';
+      document.getElementById('report-pee').value = 'Yes';
+      document.getElementById('report-poop').value = 'Yes';
+      document.getElementById('report-notes').value = '';
       showToast('Service report submitted');
       renderPetAdvocate();
     }
@@ -671,39 +675,34 @@
         adminWarning.classList.add('hidden');
         advocateWarning.classList.add('hidden');
       }
-      const data = getData();
       if (currentUser.role === 'admin') {
         const calendarEl = document.getElementById('admin-calendar');
         if (!adminCalendar) {
           adminCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
-            events: calendarData.events.map(event => {
-              const client = data.clients?.find(c => c.id === event.clientId);
-              return {
-                ...event,
-                color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' : 
-                                      event.status === 'booked' ? '#22c55e' : 
-                                      event.status === 'completed' ? '#6b7280' : 
-                                      '#ef4444')
-              };
-            }),
-            headerToolbar: { left: 'prev,next,today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            events: calendarData.events.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#ef4444')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
             slotMinTime: '08:00:00',
             slotMaxTime: '20:00:00',
-            height: '600px',
             eventDidMount: function(info) {
               const event = info.event;
               const props = event.extendedProps;
-              const client = data.clients?.find(c => c.id === props.clientId);
-              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${event.start.toLocaleString()}\n${props.advocateId ? `Advocate: ${props.advocateId}` : client ? `Client: ${client.name}, ${client.phone}, ${client.email}` : ''}`;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${event.start.toLocaleString()}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
             },
             eventContent: function(info) {
               const event = info.event;
               const props = event.extendedProps;
+              const isMonthView = info.view.type === 'dayGridMonth';
               return {
                 html: `<div class="flex items-center">
-                  <span class="text-sm font-semibold px-2 py-1 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-500 text-white' : props.status === 'booked' ? 'bg-green-500 text-white' : props.status === 'completed' ? 'bg-gray-500 text-white' : 'bg-red-500 text-white'}">${props.status}</span>
-                  <span class="ml-2">${event.title}</span>
+                  ${isMonthView ? '' : `<span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-red-200 text-red-800'}">${props.status}</span>`}
+                  <span class="${isMonthView ? 'text-xs' : 'text-sm'} ml-1">${event.title}</span>
                 </div>`
               };
             },
@@ -722,7 +721,7 @@
                   showToast('Event updated');
                 }
               }, () => {
-                showModal(`Delete event "${event.title}"?`, () => {
+                showModal(`Delete event ${info.event.title}?`, () => {
                   calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
                   localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
                   adminCalendar.refetchEvents();
@@ -734,56 +733,47 @@
           });
         }
         adminCalendar.removeAllEvents();
-        adminCalendar.addEventSource(calendarData.events.map(event => {
-          const client = data.clients?.find(c => c.id === event.clientId);
-          return {
-            ...event,
-            color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' : 
-                                  event.status === 'booked' ? '#22c55e' : 
-                                  event.status === 'completed' ? '#6b7280' : 
-                                  '#ef4444')
-          };
-        }));
+        adminCalendar.addEventSource(calendarData.events.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#ef4444')
+        })));
         adminCalendar.render();
       } else {
         const calendarEl = document.getElementById('advocate-calendar');
-        const filteredEvents = calendarData.events.filter(event => {
-          const isValid = event.advocateId === currentUser.id || 
-                         (event.status === 'available' && event.clientId && !event.advocateId);
-          if (!isValid) console.log('Event filtered out:', event);
-          return isValid;
-        });
+        const filteredEvents = calendarData.events.filter(event =>
+          event.advocateId === currentUser.id ||
+          (event.status === 'available' && event.clientId && !event.advocateId)
+        );
         console.log('Filtered events for advocate calendar:', filteredEvents);
         if (!advocateCalendar) {
           advocateCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
-            events: filteredEvents.map(event => {
-              const client = data.clients?.find(c => c.id === event.clientId);
-              return {
-                ...event,
-                color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' : 
-                                      event.status === 'booked' ? '#22c55e' : 
-                                      event.status === 'completed' ? '#6b7280' : 
-                                      '#3b82f6')
-              };
-            }),
-            headerToolbar: { left: 'prev,next,today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            events: filteredEvents.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#3b82f6')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
             slotMinTime: '08:00:00',
             slotMaxTime: '20:00:00',
-            height: '600px',
             eventDidMount: function(info) {
               const event = info.event;
               const props = event.extendedProps;
-              const client = data.clients?.find(c => c.id === props.clientId);
-              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${event.start.toLocaleString()}\n${props.advocateId ? `Advocate: ${props.advocateId}` : client ? `Client: ${client.name}, ${client.phone}, ${client.email}` : ''}`;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${event.start.toLocaleString()}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
             },
             eventContent: function(info) {
               const event = info.event;
               const props = event.extendedProps;
+              const isMonthView = info.view.type === 'dayGridMonth';
               return {
                 html: `<div class="flex items-center">
-                  <span class="text-sm font-semibold px-2 py-1 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-500 text-white' : props.status === 'booked' ? 'bg-green-500 text-white' : props.status === 'completed' ? 'bg-gray-500 text-white' : 'bg-blue-500 text-white'}">${props.status}</span>
-                  <span class="ml-2">${event.title}</span>
+                  ${isMonthView ? '' : `<span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-blue-200 text-blue-800'}">${props.status}</span>`}
+                  <span class="${isMonthView ? 'text-xs' : 'text-sm'} ml-1">${event.title}</span>
                 </div>`
               };
             },
@@ -797,7 +787,7 @@
                   saveLocalEvent(event);
                   advocateCalendar.refetchEvents();
                   renderPetAdvocate();
-                  showToast(`Event "${event.title}" cancelled`);
+                  showToast('Event cancelled');
                 });
               } else if (event.status === 'available' && event.clientId && !event.advocateId) {
                 showModal(`Accept client request: ${info.event.title}?`, () => {
@@ -806,23 +796,20 @@
                   saveLocalEvent(event);
                   advocateCalendar.refetchEvents();
                   renderPetAdvocate();
-                  showToast(`Client request "${event.title}" accepted by ${currentUser.firstName}`);
+                  showToast('Client request accepted');
                 });
               }
             },
           });
         }
         advocateCalendar.removeAllEvents();
-        advocateCalendar.addEventSource(filteredEvents.map(event => {
-          const client = data.clients?.find(c => c.id === event.clientId);
-          return {
-            ...event,
-            color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' : 
-                                  event.status === 'booked' ? '#22c55e' : 
-                                  event.status === 'completed' ? '#6b7280' : 
-                                  '#3b82f6')
-          };
-        }));
+        advocateCalendar.addEventSource(filteredEvents.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#3b82f6')
+        })));
         advocateCalendar.render();
       }
     }
@@ -836,7 +823,22 @@
         const advocate = data.users.find(u => u.id === r.advocateId);
         const schedule = calendarData.events.find(e => e.id === r.scheduleId);
         reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title || 'Unknown'}, Client: ${r.clientName || 'Unknown'}, Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+          <li class="p-2 border-b border-gray-200">
+            <div>🐾 Leashed Walk Report Card! 🐾</div>
+            <div class="mt-2">${r.petName}:</div>
+            <div class="mt-2">🕒 Walk Details:</div>
+            <div>Start Time: ${formatDateTime(r.startDatetime)}</div>
+            <div>End Time: ${formatDateTime(r.endDatetime)}</div>
+            <div>Duration: ${r.duration}</div>
+            <div class="mt-2">✅ Potty Report:</div>
+            <div>Pee: ${r.pee}</div>
+            <div>Poop: ${r.poop}</div>
+            <div class="mt-2">⭐ A Note From Your Walker:</div>
+            <div>${r.notes}</div>
+            <div class="mt-2">Thank you for trusting me with ${r.petName} adventures! 🐾</div>
+            <div>Looking forward to our next walk! And as a friendly reminder, this same attentive care is always here for them should you need sitting for any future travels.</div>
+            <div class="mt-2 text-sm text-gray-500">Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}, Submitted: ${r.timestamp}</div>
+          </li>
         `;
       });
       data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
@@ -889,13 +891,26 @@
       const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status === 'booked');
       console.log('Schedules for service report:', schedules);
       schedules.forEach(s => {
-        const client = data.clients?.find(c => c.id === s.clientId);
-        scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${s.start}${client ? `, Client: ${client.name}` : ''}</option>`;
+        scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${s.start}</option>`;
       });
       data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
-        const schedule = calendarData.events.find(e => e.id === r.scheduleId);
         reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">Service: ${r.serviceType}, Pet: ${schedule?.title || 'Unknown'}, Client: ${r.clientName || 'Unknown'}, Notes: ${r.notes}, Time: ${r.timestamp}</li>
+          <li class="p-2 border-b border-gray-200">
+            <div>🐾 Leashed Walk Report Card! 🐾</div>
+            <div class="mt-2">${r.petName}:</div>
+            <div class="mt-2">🕒 Walk Details:</div>
+            <div>Start Time: ${formatDateTime(r.startDatetime)}</div>
+            <div>End Time: ${formatDateTime(r.endDatetime)}</div>
+            <div>Duration: ${r.duration}</div>
+            <div class="mt-2">✅ Potty Report:</div>
+            <div>Pee: ${r.pee}</div>
+            <div>Poop: ${r.poop}</div>
+            <div class="mt-2">⭐ A Note From Your Walker:</div>
+            <div>${r.notes}</div>
+            <div class="mt-2">Thank you for trusting me with ${r.petName} adventures! 🐾</div>
+            <div>Looking forward to our next walk! And as a friendly reminder, this same attentive care is always here for them should you need sitting for any future travels.</div>
+            <div class="mt-2 text-sm text-gray-500">Submitted: ${r.timestamp}</div>
+          </li>
         `;
       });
       renderCalendars();
@@ -903,6 +918,7 @@
     // Initialize
     initializeData();
     showSection('login');
+    loadCalendarData();
   </script>
 </body>
 </html>
