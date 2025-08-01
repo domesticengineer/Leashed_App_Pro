@@ -178,10 +178,12 @@
           calendarData = data;
           const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
           calendarData.events = [...calendarData.events, ...localEvents];
+          console.log('Loaded calendar events:', calendarData.events); // Debug log
           renderCalendars();
         })
         .catch(() => {
           calendarData.events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+          console.log('Loaded local calendar events:', calendarData.events); // Debug log
           renderCalendars();
         });
     }
@@ -416,6 +418,7 @@
       }
     }
     function renderCalendars() {
+      console.log('Rendering calendars with events:', calendarData.events); // Debug log
       if (currentUser.role === 'admin') {
         const calendarEl = document.getElementById('admin-calendar');
         const calendar = new FullCalendar.Calendar(calendarEl, {
