@@ -215,9 +215,11 @@
         if (user.role === 'admin') {
           showSection('admin');
           loadCalendarData();
+          renderAdmin(); // Added to render Pet Advocates on login
         } else {
           showSection('pet-advocate');
           loadCalendarData();
+          renderPetAdvocate();
         }
       } else {
         document.getElementById('login-error').textContent = 'Invalid username or password';
