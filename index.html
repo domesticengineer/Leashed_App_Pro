@@ -438,7 +438,7 @@
         const calendarEl = document.getElementById('advocate-calendar');
         const calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: 'timeGridWeek',
-          events: calendarData.events.filter(e => e.advocateId === currentUser.id || (!e.advocateId && e.clientId && e.status === 'available')),
+          events: calendarData.events,
           eventColor: '#3b82f6',
           headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridWeek,dayGridMonth' },
           slotMinTime: '08:00:00',
