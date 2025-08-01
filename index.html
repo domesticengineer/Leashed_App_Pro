@@ -7,7 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <style>
-    /* Custom CSS to approximate Apple Calendar look */
     .fc {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: #fff;
@@ -96,6 +95,14 @@
         <div class="mb-4">
           <label for="new-zip" class="block text-gray-700">Zip Code</label>
           <input id="new-zip" type="text" placeholder="Zip Code" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-email" class="block text-gray-700">Email</label>
+          <input id="new-email" type="email" placeholder="Email" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-phone" class="block text-gray-700">Phone Number</label>
+          <input id="new-phone" type="tel" placeholder="Phone Number" class="w-full p-2 border border-gray-300 rounded-md" required>
         </div>
         <div class="mb-4">
           <label for="new-username" class="block text-gray-700">Username</label>
@@ -243,8 +250,8 @@
     function initializeData() {
       const defaultData = {
         users: [
-          { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
-          { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
+          { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', email: 'admin@example.com', phone: '123-456-7890', username: 'admin', password: btoa('admin123'), role: 'admin' },
+          { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', email: 'john.doe@example.com', phone: '987-654-3210', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
         ],
         schedules: [],
         reports: [],
@@ -306,6 +313,13 @@
       const diffMs = endDate - startDate;
       const diffMins = Math.round(diffMs / 60000);
       return `${diffMins} minutes`;
+    }
+
+    // Simulated email sending function
+    function sendWelcomeEmail(email, username, password) {
+      console.log(`Simulated email sent to ${email} with username: ${username} and password: ${password}`);
+      showToast(`Welcome email sent to ${email}`);
+      // In a real implementation, this would use an email service API like SendGrid
     }
 
     function loadCalendarData() {
@@ -455,12 +469,24 @@
       const city = document.getElementById('new-city').value;
       const state = document.getElementById('new-state').value;
       const zip = document.getElementById('new-zip').value;
+      const email = document.getElementById('new-email').value;
+      const phone = document.getElementById('new-phone').value;
       const username = document.getElementById('new-username').value;
       const password = document.getElementById('new-password').value;
       const errorDiv = document.getElementById('advocate-error');
       const data = getData();
-      if (!firstName || !lastName || !address || !city || !state || !zip || !username || !password) {
+      if (!firstName || !lastName || !address || !city || !state || !zip || !email || !phone || !username || !password) {
         errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorDiv.textContent = 'Please enter a valid email address';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      if (!/^\d{3}-\d{3}-\d{4}$/.test(phone)) {
+        errorDiv.textContent = 'Please enter a valid phone number (format: XXX-XXX-XXXX)';
         errorDiv.classList.remove('hidden');
         return;
       }
@@ -469,8 +495,13 @@
         errorDiv.classList.remove('hidden');
         return;
       }
+      if (data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        errorDiv.textContent = 'Email already exists';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
       errorDiv.classList.add('hidden');
-      data.users.push({
+      const newUser = {
         id: `advocate${data.users.length + 1}`,
         firstName,
         lastName,
@@ -478,11 +509,14 @@
         city,
         state,
         zip,
+        email,
+        phone,
         username,
         password: btoa(password),
         role: 'pet-advocate',
         onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
-      });
+      };
+      data.users.push(newUser);
       saveData(data);
       document.getElementById('new-firstname').value = '';
       document.getElementById('new-lastname').value = '';
@@ -490,10 +524,58 @@
       document.getElementById('new-city').value = '';
       document.getElementById('new-state').value = '';
       document.getElementById('new-zip').value = '';
+      document.getElementById('new-email').value = '';
+      document.getElementById('new-phone').value = '';
       document.getElementById('new-username').value = '';
       document.getElementById('new-password').value = '';
+      sendWelcomeEmail(email, username, password);
       showToast('Pet Advocate created successfully');
       renderAdmin();
+    }
+
+    // Zapier webhook simulation for creating Pet Advocate from spreadsheet
+    function createPetAdvocateFromZapier(data) {
+      const requiredFields = ['firstName', 'lastName', 'address', 'city', 'state', 'zip', 'email', 'phone', 'username', 'password'];
+      if (!requiredFields.every(field => data[field])) {
+        console.error('Missing required fields in Zapier data:', data);
+        return { success: false, error: 'Missing required fields' };
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        console.error('Invalid email in Zapier data:', data.email);
+        return { success: false, error: 'Invalid email address' };
+      }
+      if (!/^\d{3}-\d{3}-\d{4}$/.test(data.phone)) {
+        console.error('Invalid phone number in Zapier data:', data.phone);
+        return { success: false, error: 'Invalid phone number format' };
+      }
+      const appData = getData();
+      if (appData.users.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
+        console.error('Username already exists:', data.username);
+        return { success: false, error: 'Username already exists' };
+      }
+      if (appData.users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
+        console.error('Email already exists:', data.email);
+        return { success: false, error: 'Email already exists' };
+      }
+      const newUser = {
+        id: `advocate${appData.users.length + 1}`,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+        email: data.email,
+        phone: data.phone,
+        username: data.username,
+        password: btoa(data.password),
+        role: 'pet-advocate',
+        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+      };
+      appData.users.push(newUser);
+      saveData(appData);
+      sendWelcomeEmail(data.email, data.username, data.password);
+      return { success: true, message: 'Pet Advocate created successfully' };
     }
 
     function updateOnboarding(userId, task) {
@@ -515,7 +597,8 @@
         if (user) {
           user.password = btoa(newPassword);
           saveData(data);
-          showToast('Password updated');
+          sendWelcomeEmail(user.email, user.username, newPassword);
+          showToast('Password updated and email sent');
         } else {
           showToast('User not found');
         }
@@ -533,13 +616,11 @@
       const notes = document.getElementById('service-notes').value;
       const errorDiv = document.getElementById('report-error');
       const data = getData();
-
       if (!scheduleId || !petName || !startTime || !endTime || !pee || !poop) {
         errorDiv.textContent = 'Please fill in all required fields';
         errorDiv.classList.remove('hidden');
         return;
       }
-
       const startDate = new Date(startTime);
       const endDate = new Date(endTime);
       if (endDate <= startDate) {
@@ -547,7 +628,6 @@
         errorDiv.classList.remove('hidden');
         return;
       }
-
       errorDiv.classList.add('hidden');
       const schedule = calendarData.events.find(e => e.id === scheduleId);
       data.reports.push({
@@ -651,7 +731,7 @@
     function exportToCSV() {
       try {
         const data = getData();
-        const headers = ['ID', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip Code', 'Username', 'Role', 'Proposal', 'Background Check', '1099', 'E-verify', 'Photo'];
+        const headers = ['ID', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip Code', 'Email', 'Phone', 'Username', 'Role', 'Proposal', 'Background Check', '1099', 'E-verify', 'Photo'];
         const rows = data.users.map(u => [
           u.id,
           u.firstName,
@@ -660,6 +740,8 @@
           u.city || '',
           u.state || '',
           u.zip || '',
+          u.email || '',
+          u.phone || '',
           u.username,
           u.role,
           u.onboarding?.proposal ? 'Completed' : 'Pending',
@@ -699,7 +781,6 @@
         adminWarning.classList.add('hidden');
         advocateWarning.classList.add('hidden');
       }
-
       if (currentUser.role === 'admin') {
         const calendarEl = document.getElementById('admin-calendar');
         if (!adminCalendar) {
@@ -865,7 +946,7 @@
       data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
         usersList.innerHTML += `
           <li class="p-2 border-b border-gray-200">
-            <div>${u.firstName} ${u.lastName}, ${u.address}, ${u.city}, ${u.state} ${u.zip}, Username: ${u.username}</div>
+            <div>${u.firstName} ${u.lastName}, ${u.address}, ${u.city}, ${u.state} ${u.zip}, Email: ${u.email}, Phone: ${u.phone}, Username: ${u.username}</div>
             <div class="mt-2 flex flex-wrap gap-4">
               <label class="flex items-center">
                 <input type="checkbox" ${u.onboarding?.proposal ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'proposal')" class="mr-1"> Proposal
@@ -939,6 +1020,11 @@
     // Initialize
     initializeData();
     showSection('login');
+
+    // Simulated Zapier webhook endpoint (in a real implementation, this would be a server endpoint)
+    // Example usage: POST to this endpoint with JSON payload containing user data
+    // For demonstration, you can test it in the console like this:
+    // createPetAdvocateFromZapier({ firstName: 'Jane', lastName: 'Smith', address: '789 Oak St', city: 'Somewhere', state: 'TX', zip: '54321', email: 'jane.smith@example.com', phone: '555-555-5555', username: 'janesmith', password: 'jane123' });
   </script>
 </body>
 </html>
