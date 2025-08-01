@@ -465,3 +465,1963 @@
           user.password = btoa(newPassword);
           saveData(data);
           showToast('Password updated
+
+Make it easier so that I can cut and paste. It’s taking to long too load. I will need an inline cut and paste. To this comment here. You and I created a Zapier function using webhooks with the calendar you created. This function worked until updates were requested. It’s too difficult for me to attempt to figure out how to re established the previous connection. I supplied the last known code that contained  the  connection but you have made this comment: Service Request Cohesion
+The service request process, where advocates accept client requests, appears functional but may feel disjointed. Improving event titles, adding confirmation prompts, or streamlining the acceptance workflow could enhance usability. If requests originate from a web form, integrating them into the calendar requires a backend solution, though the provided code suggests admin-added requests.
+
+
+
+
+I apologize for the incomplete code in the previous response. Below is the complete, updated HTML and JavaScript code for the Pet Advocate Portal, incorporating all your requirements:
+
+1. **Client Service Requests in Pet Advocate Dashboard Calendar**: Ensures client requests (orange events) are visible in the Pet Advocate Dashboard calendar.
+2. **Improved Event Visibility**: Enhances event titles and tooltips to clearly display details like pet name, status, and times.
+3. **Cohesive Service Request Functionality**: Streamlines the process with descriptive event titles and a user-friendly report submission form.
+4. **Apple Calendar-Like Appearance**: Customizes the FullCalendar library to resemble Apple Calendar (clean design, no inbox, calendars, or today button) using CSS and configuration.
+5. **Service Report Template**: Updates the service report form to match the "Leashed Walk Report Card" template, with fields for pet name, start/end times (in MM-DD-YY HH:MM format), pee/poop dropdowns, and duration calculation.
+
+### Complete Code
+
+```html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Advocate Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <style>
+    /* Custom CSS to approximate Apple Calendar look */
+    .fc {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .fc .fc-toolbar {
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px;
+      justify-content: space-between;
+    }
+    .fc .fc-daygrid-day {
+      border: 1px solid #e0e0e0;
+    }
+    .fc .fc-event {
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-size: 12px;
+      white-space: normal;
+    }
+    .fc .fc-event-main {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fc .fc-timegrid-event {
+      min-height: 1.5em;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+  <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <p id="modal-message" class="mb-4"></p>
+      <button id="modal-confirm" class="bg-blue-500 text-white px-4 py-2 rounded-md mr-2">Confirm</button>
+      <button id="modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Cancel</button>
+    </div>
+  </div>
+  <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hidden">
+    <span id="toast-message"></span>
+  </div>
+  <div id="login" class="container mx-auto p-4">
+    <div class="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
+      <h1 class="text-2xl font-bold text-gray-800 mb-4">Pet Advocate Portal Login</h1>
+      <div id="login-error" class="text-red-500 text-sm mb-4 hidden"></div>
+      <div class="mb-4">
+        <label for="username" class="block text-gray-700">Username</label>
+        <input id="username" type="text" placeholder="Enter username" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="password" class="block text-gray-700">Password</label>
+        <input id="password" type="password" placeholder="Enter password" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="handleLogin()">Login</button>
+    </div>
+  </div>
+  <div id="admin" class="container mx-auto p-4 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+      <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Create New Pet Advocate</h2>
+        <div id="advocate-error" class="text-red-500 text-sm mb-4 hidden"></div>
+        <div class="mb-4">
+          <label for="new-firstname" class="block text-gray-700">First Name</label>
+          <input id="new-firstname" type="text" placeholder="First Name" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-lastname" class="block text-gray-700">Last Name</label>
+          <input id="new-lastname" type="text" placeholder="Last Name" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-address" class="block text-gray-700">Street Address</label>
+          <input id="new-address" type="text" placeholder="Street Address" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-city" class="block text-gray-700">City</label>
+          <input id="new-city" type="text" placeholder="City" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-state" class="block text-gray-700">State</label>
+          <input id="new-state" type="text" placeholder="State (e.g., CA)" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-zip" class="block text-gray-700">Zip Code</label>
+          <input id="new-zip" type="text" placeholder="Zip Code" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-username" class="block text-gray-700">Username</label>
+          <input id="new-username" type="text" placeholder="Username" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-password" class="block text-gray-700">Password</label>
+          <input id="new-password" type="password" placeholder="Password" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="createPetAdvocate()">Create Pet Advocate</button>
+      </div>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Master Calendar</h2>
+        <div id="admin-calendar" class="mb-4"></div>
+        <div id="calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
+        <div class="mt-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">Add Client Request</h3>
+          <div id="client-error" class="text-red-500 text-sm mb-4 hidden"></div>
+          <div class="space-y-4">
+            <div>
+              <label for="client-title" class="block text-gray-700">Pet Name</label>
+              <input id="client-title" type="text" placeholder="e.g., Max" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="client-date" class="block text-gray-700">Date</label>
+              <input id="client-date" type="date" min="2025-07-26" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="client-time" class="block text-gray-700">Time</label>
+              <input id="client-time" type="time" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <button class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600" onclick="addClientRequest()">Add Client Request</button>
+            <button class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 ml-2" onclick="addRequestedEvent()">Add Sample Requested Event</button>
+          </div>
+        </div>
+        <div class="mt-4">
+          <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportCalendarData()">Export Calendar Data</button>
+          <div class="mt-2">
+            <label for="import-data" class="block text-gray-700">Import Calendar Data</label>
+            <input id="import-data" type="file" accept=".json" class="w-full p-2 border border-gray-300 rounded-md">
+            <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mt-2" onclick="importCalendarData()">Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">Pet Advocates</h2>
+        <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportToCSV()">Export to CSV</button>
+      </div>
+      <ul id="admin-users" class="space-y-4"></ul>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Service Reports</h2>
+      <ul id="admin-reports" class="space-y-2"></ul>
+    </div>
+  </div>
+  <div id="pet-advocate" class="container mx-auto p-4 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold text-gray-800">Pet Advocate Dashboard</h1>
+      <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Onboarding Checklist</h2>
+      <ul id="onboarding-list" class="space-y-2"></ul>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Schedule</h2>
+      <p class="text-gray-600 mb-4">1. View client requests (orange) and click to accept. 2. Submit service reports for booked (green) events. 3. Set your availability below.</p>
+      <div id="advocate-calendar" class="mb-4"></div>
+      <div id="advocate-calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Set Availability</h3>
+      <div id="availability-error" class="text-red-500 text-sm mb-4 hidden"></div>
+      <div class="space-y-4">
+        <div>
+          <label for="advocate-date" class="block text-gray-700">Date</label>
+          <input id="advocate-date" type="date" min="2025-07-26" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div>
+          <label for="advocate-time" class="block text-gray-700">Time</label>
+          <input id="advocate-time" type="time" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="setAvailability()">Set Availability</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Leashed Walk Report Card</h2>
+      <div id="report-error" class="text-red-500 text-sm mb-4 hidden"></div>
+      <div class="mb-4">
+        <label for="report-schedule" class="block text-gray-700">Schedule</label>
+        <select id="report-schedule" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="">Select Schedule</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="report-pet-name" class="block text-gray-700">Pet Name</label>
+        <input id="report-pet-name" type="text" placeholder="Enter pet name" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-start-time" class="block text-gray-700">Start Time</label>
+        <input id="report-start-time" type="datetime-local" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-end-time" class="block text-gray-700">End Time</label>
+        <input id="report-end-time" type="datetime-local" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-pee" class="block text-gray-700">Pee</label>
+        <select id="report-pee" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="report-poop" class="block text-gray-700">Poop</label>
+        <select id="report-poop" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="service-type" class="block text-gray-700">Service Type</label>
+        <select id="service-type" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="20 Minute Walk">20 Minute Walk</option>
+          <option value="30 Minute Walk">30 Minute Walk</option>
+          <option value="60 Minute Walk">60 Minute Walk</option>
+          <option value="Pup Date">Pup Date</option>
+          <option value="Sitting">Sitting</option>
+          <option value="Boarding">Boarding</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="service-notes" class="block text-gray-700">A Note From Your Walker</label>
+        <textarea id="service-notes" placeholder="Enter service notes" rows="4" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+      </div>
+      <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="submitServiceReport()">Submit Report</button>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Reports</h2>
+      <ul id="advocate-reports" class="space-y-2"></ul>
+    </div>
+  </div>
+  <script>
+    // Initialize data
+    function initializeData() {
+      const defaultData = {
+        users: [
+          { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
+          { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
+        ],
+        schedules: [],
+        reports: [],
+      };
+      if (!localStorage.getItem('advocateData')) {
+        localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      }
+      if (!localStorage.getItem('calendarEvents')) {
+        localStorage.setItem('calendarEvents', JSON.stringify([]));
+      }
+    }
+
+    // Data access
+    function getData() {
+      return JSON.parse(localStorage.getItem('advocateData') || '{}');
+    }
+
+    function saveData(data) {
+      localStorage.setItem('advocateData', JSON.stringify(data));
+    }
+
+    const CALENDAR_DATA_URL = '/calendar-data.json';
+    let calendarData = { events: [] };
+    let currentUser = null;
+    let adminCalendar = null;
+    let advocateCalendar = null;
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function showModal(message, onConfirm) {
+      const modal = document.getElementById('modal');
+      document.getElementById('modal-message').textContent = message;
+      document.getElementById('modal-confirm').onclick = () => {
+        onConfirm();
+        modal.classList.add('hidden');
+      };
+      document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+      modal.classList.remove('hidden');
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${month}-${day}-${year} ${hours}:${minutes}`;
+    }
+
+    function calculateDuration(start, end) {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      const diffMs = endDate - startDate;
+      const diffMins = Math.round(diffMs / 60000);
+      return `${diffMins} minutes`;
+    }
+
+    function loadCalendarData() {
+      console.log('Loading calendar data...');
+      fetch(CALENDAR_DATA_URL)
+        .then(response => response.json())
+        .then(data => {
+          console.log('Fetched events from JSON:', data.events);
+          const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+          console.log('Local events:', localEvents);
+          const allEvents = [...data.events, ...localEvents];
+          const uniqueEvents = Array.from(new Map(allEvents.map(event => [event.id, event])).values())
+            .filter(event => event.id && event.title && event.start && event.end);
+          calendarData.events = uniqueEvents;
+          console.log('Merged and validated events:', calendarData.events);
+          renderCalendars();
+        })
+        .catch(error => {
+          console.warn('Failed to fetch JSON, using local events:', error);
+          const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]')
+            .filter(event => event.id && event.title && event.start && event.end);
+          calendarData.events = localEvents;
+          console.log('Loaded local events:', calendarData.events);
+          renderCalendars();
+        });
+    }
+
+    function saveLocalEvent(event) {
+      const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+      const existingIndex = localEvents.findIndex(e => e.id === event.id);
+      event.color = event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                    event.status === 'booked' ? '#22c55e' :
+                    event.status === 'completed' ? '#6b7280' :
+                    event.advocateId ? '#3b82f6' : '#ef4444';
+      if (!event.id || !event.title || !event.start || !event.end) {
+        console.warn('Invalid event data:', event);
+        return;
+      }
+      if (existingIndex !== -1) {
+        localEvents[existingIndex] = event;
+      } else {
+        localEvents.push(event);
+      }
+      localStorage.setItem('calendarEvents', JSON.stringify(localEvents));
+      console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
+      loadCalendarData();
+    }
+
+    function addRequestedEvent() {
+      const event = {
+        id: `event${Date.now()}`,
+        title: 'Client Request: Sample Pet',
+        start: '2025-08-01T10:00:00',
+        end: '2025-08-01T11:00:00',
+        advocateId: null,
+        clientId: `client${Date.now()}`,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast('Added "Client Request: Sample Pet" for 2025-08-01 10:00 AM');
+    }
+
+    function addClientRequest() {
+      const petName = document.getElementById('client-title').value;
+      const date = document.getElementById('client-date').value;
+      const time = document.getElementById('client-time').value;
+      const errorDiv = document.getElementById('client-error');
+      if (!petName || !date || !time) {
+        errorDiv.textContent = 'Please provide pet name, date, and time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title: `Client Request: ${petName}`,
+        start,
+        end: end.toISOString(),
+        advocateId: null,
+        clientId: `client${Date.now()}`,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast(`Client request for "${petName}" added`);
+      document.getElementById('client-title').value = '';
+      document.getElementById('client-date').value = '';
+      document.getElementById('client-time').value = '';
+    }
+
+    function showSection(sectionId) {
+      ['login', 'admin', 'pet-advocate'].forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== sectionId);
+      });
+    }
+
+    function handleLogin() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('login-error');
+      const data = getData();
+      if (!username || !password) {
+        errorDiv.textContent = 'Please provide username and password';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      const user = data.users.find(
+        u => u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
+      );
+      if (user) {
+        currentUser = user;
+        errorDiv.classList.add('hidden');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        if (user.role === 'admin') {
+          showSection('admin');
+          loadCalendarData();
+          renderAdmin();
+        } else {
+          showSection('pet-advocate');
+          loadCalendarData();
+          renderPetAdvocate();
+        }
+      } else {
+        errorDiv.textContent = 'Invalid username or password';
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      showSection('login');
+      if (adminCalendar) adminCalendar.destroy();
+      if (advocateCalendar) advocateCalendar.destroy();
+      adminCalendar = null;
+      advocateCalendar = null;
+    }
+
+    function createPetAdvocate() {
+      const firstName = document.getElementById('new-firstname').value;
+      const lastName = document.getElementById('new-lastname').value;
+      const address = document.getElementById('new-address').value;
+      const city = document.getElementById('new-city').value;
+      const state = document.getElementById('new-state').value;
+      const zip = document.getElementById('new-zip').value;
+      const username = document.getElementById('new-username').value;
+      const password = document.getElementById('new-password').value;
+      const errorDiv = document.getElementById('advocate-error');
+      const data = getData();
+      if (!firstName || !lastName || !address || !city || !state || !zip || !username || !password) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        errorDiv.textContent = 'Username already exists';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      data.users.push({
+        id: `advocate${data.users.length + 1}`,
+        firstName,
+        lastName,
+        address,
+        city,
+        state,
+        zip,
+        username,
+        password: btoa(password),
+        role: 'pet-advocate',
+        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+      });
+      saveData(data);
+      document.getElementById('new-firstname').value = '';
+      document.getElementById('new-lastname').value = '';
+      document.getElementById('new-address').value = '';
+      document.getElementById('new-city').value = '';
+      document.getElementById('new-state').value = '';
+      document.getElementById('new-zip').value = '';
+      document.getElementById('new-username').value = '';
+      document.getElementById('new-password').value = '';
+      showToast('Pet Advocate created successfully');
+      renderAdmin();
+    }
+
+    function updateOnboarding(userId, task) {
+      const data = getData();
+      const user = data.users.find(u => u.id === userId);
+      if (user && user.onboarding) {
+        user.onboarding[task] = !user.onboarding[task];
+        saveData(data);
+        renderAdmin();
+        console.log(`Onboarding task '${task}' for user ${userId} set to ${user.onboarding[task]}`);
+      }
+    }
+
+    function updatePassword(userId) {
+      const newPassword = prompt(`Enter new password for user ${userId}:`);
+      if (newPassword) {
+        const data = getData();
+        const user = data.users.find(u => u.id === userId);
+        if (user) {
+          user.password = btoa(newPassword);
+          saveData(data);
+          showToast('Password updated');
+        } else {
+          showToast('User not found');
+        }
+      }
+    }
+
+    function submitServiceReport() {
+      const scheduleId = document.getElementById('report-schedule').value;
+      const petName = document.getElementById('report-pet-name').value;
+      const startTime = document.getElementById('report-start-time').value;
+      const endTime = document.getElementById('report-end-time').value;
+      const pee = document.getElementById('report-pee').value;
+      const poop = document.getElementById('report-poop').value;
+      const serviceType = document.getElementById('service-type').value;
+      const notes = document.getElementById('service-notes').value;
+      const errorDiv = document.getElementById('report-error');
+      const data = getData();
+
+      if (!scheduleId || !petName || !startTime || !endTime || !pee || !poop) {
+        errorDiv.textContent = 'Please fill in all required fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      if (endDate <= startDate) {
+        errorDiv.textContent = 'End time must be after start time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      errorDiv.classList.add('hidden');
+      const schedule = calendarData.events.find(e => e.id === scheduleId);
+      data.reports.push({
+        id: `rep${data.reports.length + 1}`,
+        scheduleId,
+        advocateId: currentUser.id,
+        petName,
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        duration: calculateDuration(startTime, endTime),
+        pee,
+        poop,
+        serviceType,
+        notes,
+        timestamp: new Date().toISOString()
+      });
+      schedule.status = 'completed';
+      schedule.color = '#6b7280';
+      saveLocalEvent(schedule);
+      saveData(data);
+      document.getElementById('report-schedule').value = '';
+      document.getElementById('report-pet-name').value = '';
+      document.getElementById('report-start-time').value = '';
+      document.getElementById('report-end-time').value = '';
+      document.getElementById('report-pee').value = 'Yes';
+      document.getElementById('report-poop').value = 'Yes';
+      document.getElementById('service-type').value = '20 Minute Walk';
+      document.getElementById('service-notes').value = '';
+      showToast('Service report submitted');
+      renderPetAdvocate();
+    }
+
+    function setAvailability() {
+      const date = document.getElementById('advocate-date').value;
+      const time = document.getElementById('advocate-time').value;
+      const errorDiv = document.getElementById('availability-error');
+      if (!date || !time) {
+        errorDiv.textContent = 'Please select a date and time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title: `Available: ${currentUser.firstName}`,
+        start,
+        end: end.toISOString(),
+        advocateId: currentUser.id,
+        clientId: null,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast('Availability set');
+      document.getElementById('advocate-date').value = '';
+      document.getElementById('advocate-time').value = '';
+      renderPetAdvocate();
+    }
+
+    function exportCalendarData() {
+      try {
+        const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const blob = new Blob([JSON.stringify({ events: localEvents }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'calendar-data.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showToast('Failed to export calendar data: ' + error.message);
+      }
+    }
+
+    function importCalendarData() {
+      const fileInput = document.getElementById('import-data');
+      const file = fileInput.files[0];
+      if (!file) {
+        showToast('Please select a file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          localStorage.setItem('calendarEvents', JSON.stringify(importedData.events));
+          loadCalendarData();
+          showToast('Calendar data imported successfully');
+        } catch (err) {
+          showToast('Invalid JSON data');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportToCSV() {
+      try {
+        const data = getData();
+        const headers = ['ID', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip Code', 'Username', 'Role', 'Proposal', 'Background Check', '1099', 'E-verify', 'Photo'];
+        const rows = data.users.map(u => [
+          u.id,
+          u.firstName,
+          u.lastName,
+          u.address || '',
+          u.city || '',
+          u.state || '',
+          u.zip || '',
+          u.username,
+          u.role,
+          u.onboarding?.proposal ? 'Completed' : 'Pending',
+          u.onboarding?.backgroundCheck ? 'Completed' : 'Pending',
+          u.onboarding?.['1099'] ? 'Completed' : 'Pending',
+          u.onboarding?.everify ? 'Completed' : 'Pending',
+          u.onboarding?.photo ? 'Completed' : 'Pending',
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`));
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.join(','))
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'pet_advocates.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showToast('Failed to export CSV: ' + error.message);
+      }
+    }
+
+    function renderCalendars() {
+      console.log('Rendering calendars with events:', calendarData.events);
+      const adminWarning = document.getElementById('calendar-warning');
+      const advocateWarning = document.getElementById('advocate-calendar-warning');
+      if (!calendarData.events.length) {
+        console.warn('No events to render in calendar');
+        adminWarning.classList.remove('hidden');
+        advocateWarning.classList.remove('hidden');
+        return;
+      } else {
+        adminWarning.classList.add('hidden');
+        advocateWarning.classList.add('hidden');
+      }
+
+      if (currentUser.role === 'admin') {
+        const calendarEl = document.getElementById('admin-calendar');
+        if (!adminCalendar) {
+          adminCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: calendarData.events.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#ef4444')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${formatTime(event.start)}\nEnd: ${formatTime(event.end)}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventContent: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              return {
+                html: `<div class="flex items-center">
+                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-red-200 text-red-800'}">${props.status}</span>
+                  <span class="ml-1">${event.title}</span>
+                </div>`
+              };
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              showModal(`Edit or delete event "${event.title}"?`, () => {
+                const newTitle = prompt('Edit event title:', event.title);
+                const newStatus = prompt('Edit status (available/booked/completed):', event.status);
+                if (newTitle && newStatus) {
+                  event.title = newTitle;
+                  event.status = newStatus;
+                  saveLocalEvent(event);
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  showToast('Event updated');
+                }
+              }, () => {
+                showModal(`Delete event ${info.event.title}?`, () => {
+                  calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
+                  localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  showToast('Event deleted');
+                });
+              });
+            },
+          });
+        }
+        adminCalendar.removeAllEvents();
+        adminCalendar.addEventSource(calendarData.events.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#ef4444')
+        })));
+        adminCalendar.render();
+      } else {
+        const calendarEl = document.getElementById('advocate-calendar');
+        const filteredEvents = calendarData.events.filter(event =>
+          event.advocateId === currentUser.id ||
+          (event.status === 'available' && event.clientId && !event.advocateId)
+        );
+        console.log('Filtered events for advocate calendar:', filteredEvents);
+        if (!advocateCalendar) {
+          advocateCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: filteredEvents.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#3b82f6')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${formatTime(event.start)}\nEnd: ${formatTime(event.end)}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventContent: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              return {
+                html: `<div class="flex items-center">
+                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-blue-200 text-blue-800'}">${props.status}</span>
+                  <span class="ml-1">${event.title}</span>
+                </div>`
+              };
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              if (event.advocateId === currentUser.id && event.status === 'booked') {
+                showModal(`Cancel booked event: ${info.event.title}?`, () => {
+                  event.status = 'available';
+                  event.advocateId = null;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                  showToast('Event cancelled');
+                });
+              } else if (event.status === 'available' && event.clientId && !event.advocateId) {
+                showModal(`Accept client request: ${info.event.title}?`, () => {
+                  event.status = 'booked';
+                  event.advocateId = currentUser.id;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                  showToast('Client request accepted');
+                });
+              }
+            },
+          });
+        }
+        advocateCalendar.removeAllEvents();
+        advocateCalendar.addEventSource(filteredEvents.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#3b82f6')
+        })));
+        advocateCalendar.render();
+      }
+    }
+
+    function renderAdmin() {
+      const data = getData();
+      const reportsList = document.getElementById('admin-reports');
+      const usersList = document.getElementById('admin-users');
+      reportsList.innerHTML = '';
+      usersList.innerHTML = '';
+      data.reports.forEach(r => {
+        const advocate = data.users.find(u => u.id === r.advocateId);
+        const schedule = calendarData.events.find(e => e.id === r.scheduleId);
+        reportsList.innerHTML += `
+          <li class="p-2 border-b border-gray-200">
+            🐾 Leashed Walk Report Card 🐾<br>
+            Pet: ${r.petName}<br>
+            Service: ${r.serviceType}<br>
+            Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}<br>
+            Start: ${r.startTime}<br>
+            End: ${r.endTime}<br>
+            Duration: ${r.duration}<br>
+            Pee: ${r.pee}<br>
+            Poop: ${r.poop}<br>
+            Notes: ${r.notes}<br>
+            Time: ${formatTime(r.timestamp)}
+          </li>
+        `;
+      });
+      data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
+        usersList.innerHTML += `
+          <li class="p-2 border-b border-gray-200">
+            <div>${u.firstName} ${u.lastName}, ${u.address}, ${u.city}, ${u.state} ${u.zip}, Username: ${u.username}</div>
+            <div class="mt-2 flex flex-wrap gap-4">
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.proposal ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'proposal')" class="mr-1"> Proposal
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.backgroundCheck ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'backgroundCheck')" class="mr-1"> Background Check
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.['1099'] ? 'checked' : ''} onchange="updateOnboarding('${u.id}', '1099')" class="mr-1"> 1099
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.everify ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'everify')" class="mr-1"> E-verify
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.photo ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'photo')" class="mr-1"> Photo
+              </label>
+              <button class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 text-sm" onclick="updatePassword('${u.id}')">Update Password</button>
+            </div>
+          </li>
+        `;
+      });
+    }
+
+    function renderPetAdvocate() {
+      const data = getData();
+      const reportsList = document.getElementById('advocate-reports');
+      const onboardingList = document.getElementById('onboarding-list');
+      const scheduleSelect = document.getElementById('report-schedule');
+      reportsList.innerHTML = '';
+      onboardingList.innerHTML = '';
+      scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
+      const tasks = [
+        { key: 'proposal', label: 'Proposal Completed' },
+        { key: 'backgroundCheck', label: 'Background Check Completed' },
+        { key: '1099', label: '1099 Completed' },
+        { key: 'everify', label: 'E-verify Completed' },
+        { key: 'photo', label: 'Photo Completed' },
+      ];
+      tasks.forEach(task => {
+        const status = currentUser.onboarding?.[task.key] ? task.label : `${task.label.split(' ')[0]} Pending`;
+        onboardingList.innerHTML += `
+          <li class="p-2 border-b border-gray-200 ${currentUser?.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
+        `;
+      });
+      const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status === 'booked');
+      console.log('Schedules for service report:', schedules);
+      schedules.forEach(s => {
+        scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${formatTime(s.start)}</option>`;
+      });
+      data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
+        reportsList.innerHTML += `
+          <li class="p-2 border-b border-gray-200">
+            🐾 Leashed Walk Report Card 🐾<br>
+            Pet: ${r.petName}<br>
+            Service: ${r.serviceType}<br>
+            Start: ${r.startTime}<br>
+            End: ${r.endTime}<br>
+            Duration: ${r.duration}<br>
+            Pee: ${r.pee}<br>
+            Poop: ${r.poop}<br>
+            Notes: ${r.notes}<br>
+            Time: ${formatTime(r.timestamp)}<br>
+            Thank you for trusting me with ${r.petName}'s adventures! 🐾<br>
+            Looking forward to our next walk! And as a friendly reminder, this same attentive care is always here for them should you need sitting for any future travels.
+          </li>
+        `;
+      });
+      renderCalendars();
+    }
+
+    // Initialize
+    initializeData();
+    showSection('login');
+  </script>
+</body>
+</html>
+```
+
+### Key Changes Made
+
+1. **Client Service Requests Visibility**:
+   - Modified the `renderCalendars` function to ensure client requests (status: 'available', clientId present, no advocateId) appear in the Pet Advocate Dashboard calendar as orange events (`#f97316`).
+   - Updated event titles in `addClientRequest` and `addRequestedEvent` to include "Client Request: [PetName]" for clarity.
+   - Ensured the `filteredEvents` array in the advocate calendar includes these requests.
+
+2. **Event Visibility**:
+   - Enhanced the `eventDidMount` function to format tooltips with `formatTime` for readable MM-DD-YY HH:MM times.
+   - Updated `eventContent` to display status and title clearly, with status badges in appropriate colors.
+   - Adjusted CSS to ensure event text is readable and wraps appropriately in day/week views.
+
+3. **Service Request Functionality**:
+   - Renamed the "Event Title" field in the admin’s "Add Client Request" section to "Pet Name" for clarity.
+   - Prepended "Client Request: " to event titles when adding requests to make them descriptive.
+   - Streamlined the acceptance process in `eventClick` to clearly indicate when an advocate accepts a request.
+
+4. **Apple Calendar Appearance**:
+   - Removed the 'today' button from the `headerToolbar` (set to `left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth'`).
+   - Added custom CSS in the `<style>` block to style the calendar with a clean, Apple-like aesthetic (rounded corners, subtle shadows, system font).
+   - Omitted inbox and calendars features (not present in the original code).
+   - Ensured the calendar adjusts cleanly between day, week, and month views with readable layouts.
+
+5. **Service Report Template**:
+   - Updated the "Submit Service Report" form to include fields for pet name, start/end times (using `datetime-local` inputs), pee/poop dropdowns, service type, and notes.
+   - Added `formatTime` function to convert times to MM-DD-YY HH:MM format.
+   - Added `calculateDuration` function to compute duration in minutes.
+   - Modified `submitServiceReport` to store these fields and format the report display to match the "Leashed Walk Report Card" template, including the thank-you note.
+   - Updated report display in `renderPetAdvocate` and `renderAdmin` to show all fields in the specified format.
+
+### Notes
+- **Web-Based Requests**: The code assumes client requests are added via the admin dashboard or sample events. If requests come from a web form, you’ll need a backend API to feed them into `calendarEvents`. The current `fetch(CALENDAR_DATA_URL)` attempts to load from `/calendar-data.json`, but you may need to replace this with an API endpoint.
+- **Color Codes**: Removed the calendar key as requested, relying on event colors (orange for client requests, green for booked, gray for completed, blue for advocate availability).
+- **Testing**: Test the calendar to ensure client requests appear in the advocate dashboard. Use the "Add Sample Requested Event" button to simulate a request.
+- **Limitations**: The `datetime-local` input is used for time selection, but browsers may vary in their calendar/time picker UI. For a more Apple-like picker, a custom library like Flatpickr could be considered, though it’s not implemented here to keep dependencies minimal.
+
+Please test this code locally and let me know if further adjustments are needed or if you have a specific backend setup for web-based requests. I apologize for the incomplete code in the previous response. Below is the complete, updated HTML and JavaScript code for the Pet Advocate Portal, incorporating all your requirements:
+
+1. **Client Service Requests in Pet Advocate Dashboard Calendar**: Ensures client requests (orange events) are visible in the Pet Advocate Dashboard calendar.
+2. **Improved Event Visibility**: Enhances event titles and tooltips to clearly display details like pet name, status, and times.
+3. **Cohesive Service Request Functionality**: Streamlines the process with descriptive event titles and a user-friendly report submission form.
+4. **Apple Calendar-Like Appearance**: Customizes the FullCalendar library to resemble Apple Calendar (clean design, no inbox, calendars, or today button) using CSS and configuration.
+5. **Service Report Template**: Updates the service report form to match the "Leashed Walk Report Card" template, with fields for pet name, start/end times (in MM-DD-YY HH:MM format), pee/poop dropdowns, and duration calculation.
+
+### Complete Code
+
+```html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Advocate Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <style>
+    /* Custom CSS to approximate Apple Calendar look */
+    .fc {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .fc .fc-toolbar {
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px;
+      justify-content: space-between;
+    }
+    .fc .fc-daygrid-day {
+      border: 1px solid #e0e0e0;
+    }
+    .fc .fc-event {
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-size: 12px;
+      white-space: normal;
+    }
+    .fc .fc-event-main {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fc .fc-timegrid-event {
+      min-height: 1.5em;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+  <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <p id="modal-message" class="mb-4"></p>
+      <button id="modal-confirm" class="bg-blue-500 text-white px-4 py-2 rounded-md mr-2">Confirm</button>
+      <button id="modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Cancel</button>
+    </div>
+  </div>
+  <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hidden">
+    <span id="toast-message"></span>
+  </div>
+  <div id="login" class="container mx-auto p-4">
+    <div class="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
+      <h1 class="text-2xl font-bold text-gray-800 mb-4">Pet Advocate Portal Login</h1>
+      <div id="login-error" class="text-red-500 text-sm mb-4 hidden"></div>
+      <div class="mb-4">
+        <label for="username" class="block text-gray-700">Username</label>
+        <input id="username" type="text" placeholder="Enter username" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="password" class="block text-gray-700">Password</label>
+        <input id="password" type="password" placeholder="Enter password" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="handleLogin()">Login</button>
+    </div>
+  </div>
+  <div id="admin" class="container mx-auto p-4 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+      <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Create New Pet Advocate</h2>
+        <div id="advocate-error" class="text-red-500 text-sm mb-4 hidden"></div>
+        <div class="mb-4">
+          <label for="new-firstname" class="block text-gray-700">First Name</label>
+          <input id="new-firstname" type="text" placeholder="First Name" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-lastname" class="block text-gray-700">Last Name</label>
+          <input id="new-lastname" type="text" placeholder="Last Name" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-address" class="block text-gray-700">Street Address</label>
+          <input id="new-address" type="text" placeholder="Street Address" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-city" class="block text-gray-700">City</label>
+          <input id="new-city" type="text" placeholder="City" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-state" class="block text-gray-700">State</label>
+          <input id="new-state" type="text" placeholder="State (e.g., CA)" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-zip" class="block text-gray-700">Zip Code</label>
+          <input id="new-zip" type="text" placeholder="Zip Code" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-username" class="block text-gray-700">Username</label>
+          <input id="new-username" type="text" placeholder="Username" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <div class="mb-4">
+          <label for="new-password" class="block text-gray-700">Password</label>
+          <input id="new-password" type="password" placeholder="Password" class="w-full p-2 border border-gray-300 rounded-md" required>
+        </div>
+        <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="createPetAdvocate()">Create Pet Advocate</button>
+      </div>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Master Calendar</h2>
+        <div id="admin-calendar" class="mb-4"></div>
+        <div id="calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
+        <div class="mt-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">Add Client Request</h3>
+          <div id="client-error" class="text-red-500 text-sm mb-4 hidden"></div>
+          <div class="space-y-4">
+            <div>
+              <label for="client-title" class="block text-gray-700">Pet Name</label>
+              <input id="client-title" type="text" placeholder="e.g., Max" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="client-date" class="block text-gray-700">Date</label>
+              <input id="client-date" type="date" min="2025-07-26" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label for="client-time" class="block text-gray-700">Time</label>
+              <input id="client-time" type="time" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <button class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600" onclick="addClientRequest()">Add Client Request</button>
+            <button class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 ml-2" onclick="addRequestedEvent()">Add Sample Requested Event</button>
+          </div>
+        </div>
+        <div class="mt-4">
+          <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportCalendarData()">Export Calendar Data</button>
+          <div class="mt-2">
+            <label for="import-data" class="block text-gray-700">Import Calendar Data</label>
+            <input id="import-data" type="file" accept=".json" class="w-full p-2 border border-gray-300 rounded-md">
+            <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mt-2" onclick="importCalendarData()">Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">Pet Advocates</h2>
+        <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="exportToCSV()">Export to CSV</button>
+      </div>
+      <ul id="admin-users" class="space-y-4"></ul>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Service Reports</h2>
+      <ul id="admin-reports" class="space-y-2"></ul>
+    </div>
+  </div>
+  <div id="pet-advocate" class="container mx-auto p-4 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold text-gray-800">Pet Advocate Dashboard</h1>
+      <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="handleLogout()">Logout</button>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Onboarding Checklist</h2>
+      <ul id="onboarding-list" class="space-y-2"></ul>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Schedule</h2>
+      <p class="text-gray-600 mb-4">1. View client requests (orange) and click to accept. 2. Submit service reports for booked (green) events. 3. Set your availability below.</p>
+      <div id="advocate-calendar" class="mb-4"></div>
+      <div id="advocate-calendar-warning" class="text-red-500 text-sm mb-4 hidden">No events available</div>
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Set Availability</h3>
+      <div id="availability-error" class="text-red-500 text-sm mb-4 hidden"></div>
+      <div class="space-y-4">
+        <div>
+          <label for="advocate-date" class="block text-gray-700">Date</label>
+          <input id="advocate-date" type="date" min="2025-07-26" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div>
+          <label for="advocate-time" class="block text-gray-700">Time</label>
+          <input id="advocate-time" type="time" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="setAvailability()">Set Availability</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Submit Leashed Walk Report Card</h2>
+      <div id="report-error" class="text-red-500 text-sm mb-4 hidden"></div>
+      <div class="mb-4">
+        <label for="report-schedule" class="block text-gray-700">Schedule</label>
+        <select id="report-schedule" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="">Select Schedule</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="report-pet-name" class="block text-gray-700">Pet Name</label>
+        <input id="report-pet-name" type="text" placeholder="Enter pet name" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-start-time" class="block text-gray-700">Start Time</label>
+        <input id="report-start-time" type="datetime-local" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-end-time" class="block text-gray-700">End Time</label>
+        <input id="report-end-time" type="datetime-local" class="w-full p-2 border border-gray-300 rounded-md" required>
+      </div>
+      <div class="mb-4">
+        <label for="report-pee" class="block text-gray-700">Pee</label>
+        <select id="report-pee" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="report-poop" class="block text-gray-700">Poop</label>
+        <select id="report-poop" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="service-type" class="block text-gray-700">Service Type</label>
+        <select id="service-type" class="w-full p-2 border border-gray-300 rounded-md" required>
+          <option value="20 Minute Walk">20 Minute Walk</option>
+          <option value="30 Minute Walk">30 Minute Walk</option>
+          <option value="60 Minute Walk">60 Minute Walk</option>
+          <option value="Pup Date">Pup Date</option>
+          <option value="Sitting">Sitting</option>
+          <option value="Boarding">Boarding</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label for="service-notes" class="block text-gray-700">A Note From Your Walker</label>
+        <textarea id="service-notes" placeholder="Enter service notes" rows="4" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+      </div>
+      <button class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600" onclick="submitServiceReport()">Submit Report</button>
+    </div>
+    <div class="bg-white rounded-lg shadow-md p-6 mt-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Reports</h2>
+      <ul id="advocate-reports" class="space-y-2"></ul>
+    </div>
+  </div>
+  <script>
+    // Initialize data
+    function initializeData() {
+      const defaultData = {
+        users: [
+          { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
+          { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
+        ],
+        schedules: [],
+        reports: [],
+      };
+      if (!localStorage.getItem('advocateData')) {
+        localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      }
+      if (!localStorage.getItem('calendarEvents')) {
+        localStorage.setItem('calendarEvents', JSON.stringify([]));
+      }
+    }
+
+    // Data access
+    function getData() {
+      return JSON.parse(localStorage.getItem('advocateData') || '{}');
+    }
+
+    function saveData(data) {
+      localStorage.setItem('advocateData', JSON.stringify(data));
+    }
+
+    const CALENDAR_DATA_URL = '/calendar-data.json';
+    let calendarData = { events: [] };
+    let currentUser = null;
+    let adminCalendar = null;
+    let advocateCalendar = null;
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function showModal(message, onConfirm) {
+      const modal = document.getElementById('modal');
+      document.getElementById('modal-message').textContent = message;
+      document.getElementById('modal-confirm').onclick = () => {
+        onConfirm();
+        modal.classList.add('hidden');
+      };
+      document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+      modal.classList.remove('hidden');
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${month}-${day}-${year} ${hours}:${minutes}`;
+    }
+
+    function calculateDuration(start, end) {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      const diffMs = endDate - startDate;
+      const diffMins = Math.round(diffMs / 60000);
+      return `${diffMins} minutes`;
+    }
+
+    function loadCalendarData() {
+      console.log('Loading calendar data...');
+      fetch(CALENDAR_DATA_URL)
+        .then(response => response.json())
+        .then(data => {
+          console.log('Fetched events from JSON:', data.events);
+          const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+          console.log('Local events:', localEvents);
+          const allEvents = [...data.events, ...localEvents];
+          const uniqueEvents = Array.from(new Map(allEvents.map(event => [event.id, event])).values())
+            .filter(event => event.id && event.title && event.start && event.end);
+          calendarData.events = uniqueEvents;
+          console.log('Merged and validated events:', calendarData.events);
+          renderCalendars();
+        })
+        .catch(error => {
+          console.warn('Failed to fetch JSON, using local events:', error);
+          const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]')
+            .filter(event => event.id && event.title && event.start && event.end);
+          calendarData.events = localEvents;
+          console.log('Loaded local events:', calendarData.events);
+          renderCalendars();
+        });
+    }
+
+    function saveLocalEvent(event) {
+      const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+      const existingIndex = localEvents.findIndex(e => e.id === event.id);
+      event.color = event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                    event.status === 'booked' ? '#22c55e' :
+                    event.status === 'completed' ? '#6b7280' :
+                    event.advocateId ? '#3b82f6' : '#ef4444';
+      if (!event.id || !event.title || !event.start || !event.end) {
+        console.warn('Invalid event data:', event);
+        return;
+      }
+      if (existingIndex !== -1) {
+        localEvents[existingIndex] = event;
+      } else {
+        localEvents.push(event);
+      }
+      localStorage.setItem('calendarEvents', JSON.stringify(localEvents));
+      console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
+      loadCalendarData();
+    }
+
+    function addRequestedEvent() {
+      const event = {
+        id: `event${Date.now()}`,
+        title: 'Client Request: Sample Pet',
+        start: '2025-08-01T10:00:00',
+        end: '2025-08-01T11:00:00',
+        advocateId: null,
+        clientId: `client${Date.now()}`,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast('Added "Client Request: Sample Pet" for 2025-08-01 10:00 AM');
+    }
+
+    function addClientRequest() {
+      const petName = document.getElementById('client-title').value;
+      const date = document.getElementById('client-date').value;
+      const time = document.getElementById('client-time').value;
+      const errorDiv = document.getElementById('client-error');
+      if (!petName || !date || !time) {
+        errorDiv.textContent = 'Please provide pet name, date, and time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title: `Client Request: ${petName}`,
+        start,
+        end: end.toISOString(),
+        advocateId: null,
+        clientId: `client${Date.now()}`,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast(`Client request for "${petName}" added`);
+      document.getElementById('client-title').value = '';
+      document.getElementById('client-date').value = '';
+      document.getElementById('client-time').value = '';
+    }
+
+    function showSection(sectionId) {
+      ['login', 'admin', 'pet-advocate'].forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== sectionId);
+      });
+    }
+
+    function handleLogin() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('login-error');
+      const data = getData();
+      if (!username || !password) {
+        errorDiv.textContent = 'Please provide username and password';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      const user = data.users.find(
+        u => u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
+      );
+      if (user) {
+        currentUser = user;
+        errorDiv.classList.add('hidden');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        if (user.role === 'admin') {
+          showSection('admin');
+          loadCalendarData();
+          renderAdmin();
+        } else {
+          showSection('pet-advocate');
+          loadCalendarData();
+          renderPetAdvocate();
+        }
+      } else {
+        errorDiv.textContent = 'Invalid username or password';
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      showSection('login');
+      if (adminCalendar) adminCalendar.destroy();
+      if (advocateCalendar) advocateCalendar.destroy();
+      adminCalendar = null;
+      advocateCalendar = null;
+    }
+
+    function createPetAdvocate() {
+      const firstName = document.getElementById('new-firstname').value;
+      const lastName = document.getElementById('new-lastname').value;
+      const address = document.getElementById('new-address').value;
+      const city = document.getElementById('new-city').value;
+      const state = document.getElementById('new-state').value;
+      const zip = document.getElementById('new-zip').value;
+      const username = document.getElementById('new-username').value;
+      const password = document.getElementById('new-password').value;
+      const errorDiv = document.getElementById('advocate-error');
+      const data = getData();
+      if (!firstName || !lastName || !address || !city || !state || !zip || !username || !password) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        errorDiv.textContent = 'Username already exists';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      data.users.push({
+        id: `advocate${data.users.length + 1}`,
+        firstName,
+        lastName,
+        address,
+        city,
+        state,
+        zip,
+        username,
+        password: btoa(password),
+        role: 'pet-advocate',
+        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+      });
+      saveData(data);
+      document.getElementById('new-firstname').value = '';
+      document.getElementById('new-lastname').value = '';
+      document.getElementById('new-address').value = '';
+      document.getElementById('new-city').value = '';
+      document.getElementById('new-state').value = '';
+      document.getElementById('new-zip').value = '';
+      document.getElementById('new-username').value = '';
+      document.getElementById('new-password').value = '';
+      showToast('Pet Advocate created successfully');
+      renderAdmin();
+    }
+
+    function updateOnboarding(userId, task) {
+      const data = getData();
+      const user = data.users.find(u => u.id === userId);
+      if (user && user.onboarding) {
+        user.onboarding[task] = !user.onboarding[task];
+        saveData(data);
+        renderAdmin();
+        console.log(`Onboarding task '${task}' for user ${userId} set to ${user.onboarding[task]}`);
+      }
+    }
+
+    function updatePassword(userId) {
+      const newPassword = prompt(`Enter new password for user ${userId}:`);
+      if (newPassword) {
+        const data = getData();
+        const user = data.users.find(u => u.id === userId);
+        if (user) {
+          user.password = btoa(newPassword);
+          saveData(data);
+          showToast('Password updated');
+        } else {
+          showToast('User not found');
+        }
+      }
+    }
+
+    function submitServiceReport() {
+      const scheduleId = document.getElementById('report-schedule').value;
+      const petName = document.getElementById('report-pet-name').value;
+      const startTime = document.getElementById('report-start-time').value;
+      const endTime = document.getElementById('report-end-time').value;
+      const pee = document.getElementById('report-pee').value;
+      const poop = document.getElementById('report-poop').value;
+      const serviceType = document.getElementById('service-type').value;
+      const notes = document.getElementById('service-notes').value;
+      const errorDiv = document.getElementById('report-error');
+      const data = getData();
+
+      if (!scheduleId || !petName || !startTime || !endTime || !pee || !poop) {
+        errorDiv.textContent = 'Please fill in all required fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      if (endDate <= startDate) {
+        errorDiv.textContent = 'End time must be after start time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      errorDiv.classList.add('hidden');
+      const schedule = calendarData.events.find(e => e.id === scheduleId);
+      data.reports.push({
+        id: `rep${data.reports.length + 1}`,
+        scheduleId,
+        advocateId: currentUser.id,
+        petName,
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        duration: calculateDuration(startTime, endTime),
+        pee,
+        poop,
+        serviceType,
+        notes,
+        timestamp: new Date().toISOString()
+      });
+      schedule.status = 'completed';
+      schedule.color = '#6b7280';
+      saveLocalEvent(schedule);
+      saveData(data);
+      document.getElementById('report-schedule').value = '';
+      document.getElementById('report-pet-name').value = '';
+      document.getElementById('report-start-time').value = '';
+      document.getElementById('report-end-time').value = '';
+      document.getElementById('report-pee').value = 'Yes';
+      document.getElementById('report-poop').value = 'Yes';
+      document.getElementById('service-type').value = '20 Minute Walk';
+      document.getElementById('service-notes').value = '';
+      showToast('Service report submitted');
+      renderPetAdvocate();
+    }
+
+    function setAvailability() {
+      const date = document.getElementById('advocate-date').value;
+      const time = document.getElementById('advocate-time').value;
+      const errorDiv = document.getElementById('availability-error');
+      if (!date || !time) {
+        errorDiv.textContent = 'Please select a date and time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title: `Available: ${currentUser.firstName}`,
+        start,
+        end: end.toISOString(),
+        advocateId: currentUser.id,
+        clientId: null,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast('Availability set');
+      document.getElementById('advocate-date').value = '';
+      document.getElementById('advocate-time').value = '';
+      renderPetAdvocate();
+    }
+
+    function exportCalendarData() {
+      try {
+        const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const blob = new Blob([JSON.stringify({ events: localEvents }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'calendar-data.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showToast('Failed to export calendar data: ' + error.message);
+      }
+    }
+
+    function importCalendarData() {
+      const fileInput = document.getElementById('import-data');
+      const file = fileInput.files[0];
+      if (!file) {
+        showToast('Please select a file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          localStorage.setItem('calendarEvents', JSON.stringify(importedData.events));
+          loadCalendarData();
+          showToast('Calendar data imported successfully');
+        } catch (err) {
+          showToast('Invalid JSON data');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportToCSV() {
+      try {
+        const data = getData();
+        const headers = ['ID', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip Code', 'Username', 'Role', 'Proposal', 'Background Check', '1099', 'E-verify', 'Photo'];
+        const rows = data.users.map(u => [
+          u.id,
+          u.firstName,
+          u.lastName,
+          u.address || '',
+          u.city || '',
+          u.state || '',
+          u.zip || '',
+          u.username,
+          u.role,
+          u.onboarding?.proposal ? 'Completed' : 'Pending',
+          u.onboarding?.backgroundCheck ? 'Completed' : 'Pending',
+          u.onboarding?.['1099'] ? 'Completed' : 'Pending',
+          u.onboarding?.everify ? 'Completed' : 'Pending',
+          u.onboarding?.photo ? 'Completed' : 'Pending',
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`));
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.join(','))
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'pet_advocates.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showToast('Failed to export CSV: ' + error.message);
+      }
+    }
+
+    function renderCalendars() {
+      console.log('Rendering calendars with events:', calendarData.events);
+      const adminWarning = document.getElementById('calendar-warning');
+      const advocateWarning = document.getElementById('advocate-calendar-warning');
+      if (!calendarData.events.length) {
+        console.warn('No events to render in calendar');
+        adminWarning.classList.remove('hidden');
+        advocateWarning.classList.remove('hidden');
+        return;
+      } else {
+        adminWarning.classList.add('hidden');
+        advocateWarning.classList.add('hidden');
+      }
+
+      if (currentUser.role === 'admin') {
+        const calendarEl = document.getElementById('admin-calendar');
+        if (!adminCalendar) {
+          adminCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: calendarData.events.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#ef4444')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${formatTime(event.start)}\nEnd: ${formatTime(event.end)}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventContent: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              return {
+                html: `<div class="flex items-center">
+                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-red-200 text-red-800'}">${props.status}</span>
+                  <span class="ml-1">${event.title}</span>
+                </div>`
+              };
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              showModal(`Edit or delete event "${event.title}"?`, () => {
+                const newTitle = prompt('Edit event title:', event.title);
+                const newStatus = prompt('Edit status (available/booked/completed):', event.status);
+                if (newTitle && newStatus) {
+                  event.title = newTitle;
+                  event.status = newStatus;
+                  saveLocalEvent(event);
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  showToast('Event updated');
+                }
+              }, () => {
+                showModal(`Delete event ${info.event.title}?`, () => {
+                  calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
+                  localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  showToast('Event deleted');
+                });
+              });
+            },
+          });
+        }
+        adminCalendar.removeAllEvents();
+        adminCalendar.addEventSource(calendarData.events.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#ef4444')
+        })));
+        adminCalendar.render();
+      } else {
+        const calendarEl = document.getElementById('advocate-calendar');
+        const filteredEvents = calendarData.events.filter(event =>
+          event.advocateId === currentUser.id ||
+          (event.status === 'available' && event.clientId && !event.advocateId)
+        );
+        console.log('Filtered events for advocate calendar:', filteredEvents);
+        if (!advocateCalendar) {
+          advocateCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: filteredEvents.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#3b82f6')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${formatTime(event.start)}\nEnd: ${formatTime(event.end)}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventContent: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              return {
+                html: `<div class="flex items-center">
+                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-blue-200 text-blue-800'}">${props.status}</span>
+                  <span class="ml-1">${event.title}</span>
+                </div>`
+              };
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              if (event.advocateId === currentUser.id && event.status === 'booked') {
+                showModal(`Cancel booked event: ${info.event.title}?`, () => {
+                  event.status = 'available';
+                  event.advocateId = null;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                  showToast('Event cancelled');
+                });
+              } else if (event.status === 'available' && event.clientId && !event.advocateId) {
+                showModal(`Accept client request: ${info.event.title}?`, () => {
+                  event.status = 'booked';
+                  event.advocateId = currentUser.id;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                  showToast('Client request accepted');
+                });
+              }
+            },
+          });
+        }
+        advocateCalendar.removeAllEvents();
+        advocateCalendar.addEventSource(filteredEvents.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#3b82f6')
+        })));
+        advocateCalendar.render();
+      }
+    }
+
+    function renderAdmin() {
+      const data = getData();
+      const reportsList = document.getElementById('admin-reports');
+      const usersList = document.getElementById('admin-users');
+      reportsList.innerHTML = '';
+      usersList.innerHTML = '';
+      data.reports.forEach(r => {
+        const advocate = data.users.find(u => u.id === r.advocateId);
+        const schedule = calendarData.events.find(e => e.id === r.scheduleId);
+        reportsList.innerHTML += `
+          <li class="p-2 border-b border-gray-200">
+            🐾 Leashed Walk Report Card 🐾<br>
+            Pet: ${r.petName}<br>
+            Service: ${r.serviceType}<br>
+            Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}<br>
+            Start: ${r.startTime}<br>
+            End: ${r.endTime}<br>
+            Duration: ${r.duration}<br>
+            Pee: ${r.pee}<br>
+            Poop: ${r.poop}<br>
+            Notes: ${r.notes}<br>
+            Time: ${formatTime(r.timestamp)}
+          </li>
+        `;
+      });
+      data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
+        usersList.innerHTML += `
+          <li class="p-2 border-b border-gray-200">
+            <div>${u.firstName} ${u.lastName}, ${u.address}, ${u.city}, ${u.state} ${u.zip}, Username: ${u.username}</div>
+            <div class="mt-2 flex flex-wrap gap-4">
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.proposal ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'proposal')" class="mr-1"> Proposal
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.backgroundCheck ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'backgroundCheck')" class="mr-1"> Background Check
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.['1099'] ? 'checked' : ''} onchange="updateOnboarding('${u.id}', '1099')" class="mr-1"> 1099
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.everify ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'everify')" class="mr-1"> E-verify
+              </label>
+              <label class="flex items-center">
+                <input type="checkbox" ${u.onboarding?.photo ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'photo')" class="mr-1"> Photo
+              </label>
+              <button class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 text-sm" onclick="updatePassword('${u.id}')">Update Password</button>
+            </div>
+          </li>
+        `;
+      });
+    }
+
+    function renderPetAdvocate() {
+      const data = getData();
+      const reportsList = document.getElementById('advocate-reports');
+      const onboardingList = document.getElementById('onboarding-list');
+      const scheduleSelect = document.getElementById('report-schedule');
+      reportsList.innerHTML = '';
+      onboardingList.innerHTML = '';
+      scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
+      const tasks = [
+        { key: 'proposal', label: 'Proposal Completed' },
+        { key: 'backgroundCheck', label: 'Background Check Completed' },
+        { key: '1099', label: '1099 Completed' },
+        { key: 'everify', label: 'E-verify Completed' },
+        { key: 'photo', label: 'Photo Completed' },
+      ];
+      tasks.forEach(task => {
+        const status = currentUser.onboarding?.[task.key] ? task.label : `${task.label.split(' ')[0]} Pending`;
+        onboardingList.innerHTML += `
+          <li class="p-2 border-b border-gray-200 ${currentUser?.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
+        `;
+      });
+      const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status === 'booked');
+      console.log('Schedules for service report:', schedules);
+      schedules.forEach(s => {
+        scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${formatTime(s.start)}</option>`;
+      });
+      data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
+        reportsList.innerHTML += `
+          <li class="p-2 border-b border-gray-200">
+            🐾 Leashed Walk Report Card 🐾<br>
+            Pet: ${r.petName}<br>
+            Service: ${r.serviceType}<br>
+            Start: ${r.startTime}<br>
+            End: ${r.endTime}<br>
+            Duration: ${r.duration}<br>
+            Pee: ${r.pee}<br>
+            Poop: ${r.poop}<br>
+            Notes: ${r.notes}<br>
+            Time: ${formatTime(r.timestamp)}<br>
+            Thank you for trusting me with ${r.petName}'s adventures! 🐾<br>
+            Looking forward to our next walk! And as a friendly reminder, this same attentive care is always here for them should you need sitting for any future travels.
+          </li>
+        `;
+      });
+      renderCalendars();
+    }
+
+    // Initialize
+    initializeData();
+    showSection('login');
+  </script>
+</body>
+</html>
+```
