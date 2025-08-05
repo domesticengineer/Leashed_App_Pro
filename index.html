@@ -1192,4 +1192,172 @@
             eventContent: function(info) {
               const event = info.event;
               const props = event.extendedProps;
-              return
+              return {
+                html: `<div class="flex items-center">
+                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-blue-200 text-blue-800'}">${props.status}</span>
+                  <span class="ml-1">${event.title}</span>
+                </div>`
+              };
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              if (event.advocateId === currentUser.id && event.status === 'booked') {
+                showModal(`Cancel booked event: ${info.event.title}?`, () => {
+                  event.status = 'available';
+                  event.advocateId = null;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                  showToast('Event cancelled');
+                });
+              } else if (event.status === 'available' && event.clientId && !event.advocateId) {
+                showModal(`Accept client request: ${info.event.title}?`, () => {
+                  event.status = 'booked';
+                  event.advocateId = currentUser.id;
+                  saveLocalEvent(event);
+                  advocateCalendar.refetchEvents();
+                  renderPetAdvocate();
+                  showToast('Client request accepted');
+                });
+              }
+            },
+          });
+        }
+        advocateCalendar.removeAllEvents();
+        advocateCalendar.addEventSource(filteredEvents.map(event => ({
+          ...event,
+          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#3b82f6')
+        })));
+        advocateCalendar.render();
+      }
+    }
+
+    function renderAdmin() {
+      try {
+        const data = getData();
+        const reportsList = document.getElementById('admin-reports');
+        const usersList = document.getElementById('admin-users');
+        if (!reportsList || !usersList) {
+          console.error('Admin DOM elements not found');
+          showToast('Error rendering admin dashboard');
+          return;
+        }
+        reportsList.innerHTML = '';
+        usersList.innerHTML = '';
+        data.reports.forEach(r => {
+          const advocate = data.users.find(u => u.id === r.advocateId);
+          const schedule = calendarData.events.find(e => e.id === r.scheduleId);
+          reportsList.innerHTML += `
+            <li class="p-2 border-b border-gray-200">
+              🐾 Leashed Walk Report Card 🐾<br>
+              Pet: ${r.petName}<br>
+              Service: ${r.serviceType}<br>
+              Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}<br>
+              Start: ${r.startTime}<br>
+              End: ${r.endTime}<br>
+              Duration: ${r.duration}<br>
+              Pee: ${r.pee}<br>
+              Poop: ${r.poop}<br>
+              Notes: ${r.notes}<br>
+              Time: ${formatTime(r.timestamp)}
+            </li>
+          `;
+        });
+        data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
+          usersList.innerHTML += `
+            <li class="p-2 border-b border-gray-200">
+              <div>${u.firstName} ${u.lastName}, ${u.address}, ${u.city}, ${u.state} ${u.zip}, Email: ${u.email}, Phone: ${u.phone}, Username: ${u.username}</div>
+              <div class="mt-2 flex flex-wrap gap-4">
+                <label class="flex items-center">
+                  <input type="checkbox" ${u.onboarding?.proposal ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'proposal')" class="mr-1"> Proposal
+                </label>
+                <label class="flex items-center">
+                  <input type="checkbox" ${u.onboarding?.backgroundCheck ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'backgroundCheck')" class="mr-1"> Background Check
+                </label>
+                <label class="flex items-center">
+                  <input type="checkbox" ${u.onboarding?.['1099'] ? 'checked' : ''} onchange="updateOnboarding('${u.id}', '1099')" class="mr-1"> 1099
+                </label>
+                <label class="flex items-center">
+                  <input type="checkbox" ${u.onboarding?.everify ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'everify')" class="mr-1"> E-verify
+                </label>
+                <label class="flex items-center">
+                  <input type="checkbox" ${u.onboarding?.photo ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'photo')" class="mr-1"> Photo
+                </label>
+                <button class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 text-sm" onclick="updatePassword('${u.id}')">Update Password</button>
+              </div>
+            </li>
+          `;
+        });
+      } catch (error) {
+        console.error('Error rendering admin dashboard:', error);
+        showToast('Error rendering admin dashboard: ' + error.message);
+      }
+    }
+
+    function renderPetAdvocate() {
+      try {
+        const data = getData();
+        const reportsList = document.getElementById('advocate-reports');
+        const onboardingList = document.getElementById('onboarding-list');
+        const scheduleSelect = document.getElementById('report-schedule');
+        if (!reportsList || !onboardingList || !scheduleSelect) {
+          console.error('Pet advocate DOM elements not found');
+          showToast('Error rendering pet advocate dashboard');
+          return;
+        }
+        reportsList.innerHTML = '';
+        onboardingList.innerHTML = '';
+        scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
+        const tasks = [
+          { key: 'proposal', label: 'Proposal Completed' },
+          { key: 'backgroundCheck', label: 'Background Check Completed' },
+          { key: '1099', label: '1099 Completed' },
+          { key: 'everify', label: 'E-verify Completed' },
+          { key: 'photo', label: 'Photo Completed' },
+        ];
+        tasks.forEach(task => {
+          const status = currentUser.onboarding?.[task.key] ? task.label : `${task.label.split(' ')[0]} Pending`;
+          onboardingList.innerHTML += `
+            <li class="p-2 border-b border-gray-200 ${currentUser?.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
+          `;
+        });
+        const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status === 'booked');
+        console.log('Schedules for service report:', schedules);
+        schedules.forEach(s => {
+          scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${formatTime(s.start)}</option>`;
+        });
+        data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
+          reportsList.innerHTML += `
+            <li class="p-2 border-b border-gray-200">
+              🐾 Leashed Walk Report Card 🐾<br>
+              Pet: ${r.petName}<br>
+              Service: ${r.serviceType}<br>
+              Start: ${r.startTime}<br>
+              End: ${r.endTime}<br>
+              Duration: ${r.duration}<br>
+              Pee: ${r.pee}<br>
+              Poop: ${r.poop}<br>
+              Notes: ${r.notes}<br>
+              Time: ${formatTime(r.timestamp)}<br>
+              Thank you for trusting me with ${r.petName}'s adventures! 🐾<br>
+              Looking forward to our next walk! And as a friendly reminder, this same attentive care is always here for them should you need sitting for any future travels.
+            </li>
+          `;
+        });
+        renderCalendars();
+      } catch (error) {
+        console.error('Error rendering pet advocate dashboard:', error);
+        showToast('Error rendering pet advocate dashboard: ' + error.message);
+      }
+    }
+
+    // Initialize
+    initializeData();
+    showSection('login');
+  </script>
+</body>
+</html>
