@@ -256,9 +256,7 @@
         schedules: [],
         reports: [],
       };
-      if (!localStorage.getItem('advocateData')) {
-        localStorage.setItem('advocateData', JSON.stringify(defaultData));
-      }
+      localStorage.setItem('advocateData', JSON.stringify(defaultData));
       if (!localStorage.getItem('calendarEvents')) {
         localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
@@ -281,12 +279,33 @@
           u.username && 
           typeof u.username === 'string' && 
           u.email && 
-          typeof u.email === 'string'
+          typeof u.email === 'string' && 
+          u.password && 
+          typeof u.password === 'string'
         );
         if (!data.users.length) {
           console.warn('No valid users found after filtering, reinitializing');
           initializeData();
           return JSON.parse(localStorage.getItem('advocateData') || '{}');
+        }
+        // Ensure default admin user exists
+        if (!data.users.some(u => u.username === 'admin' && u.role === 'admin')) {
+          console.warn('Default admin user missing, adding');
+          data.users.push({
+            id: 'admin1',
+            firstName: 'Admin',
+            lastName: 'User',
+            address: '123 Main St',
+            city: 'Anytown',
+            state: 'CA',
+            zip: '12345',
+            email: 'admin@example.com',
+            phone: '123-456-7890',
+            username: 'admin',
+            password: btoa('admin123'),
+            role: 'admin'
+          });
+          localStorage.setItem('advocateData', JSON.stringify(data));
         }
         return data;
       } catch (error) {
@@ -503,8 +522,17 @@
           throw new Error('No user data found in localStorage');
         }
 
+        console.log('Users in localStorage:', data.users);
+        console.log('Input username:', username);
+        console.log('Input password (encoded):', btoa(password));
+
         const user = data.users.find(
-          u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
+          u => u.username && 
+               typeof u.username === 'string' && 
+               u.password && 
+               typeof u.password === 'string' && 
+               u.username.toLowerCase() === username.toLowerCase() && 
+               u.password === btoa(password)
         );
 
         if (user) {
@@ -525,6 +553,7 @@
         } else {
           errorDiv.textContent = 'Invalid username or password';
           errorDiv.classList.remove('hidden');
+          console.warn('No matching user found for username:', username);
         }
       } catch (error) {
         console.error('Login error:', error);
