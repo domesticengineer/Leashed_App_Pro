@@ -270,7 +270,12 @@
     }
 
     function saveData(data) {
-      localStorage.setItem('advocateData', JSON.stringify(data));
+      try {
+        localStorage.setItem('advocateData', JSON.stringify(data));
+      } catch (error) {
+        console.error('Failed to save data to localStorage:', error);
+        showToast('Error saving data: ' + error.message);
+      }
     }
 
     const CALENDAR_DATA_URL = '/calendar-data.json';
@@ -319,7 +324,6 @@
     function sendWelcomeEmail(email, username, password) {
       console.log(`Simulated email sent to ${email} with username: ${username} and password: ${password}`);
       showToast(`Welcome email sent to ${email}`);
-      // In a real implementation, this would use an email service API like SendGrid
     }
 
     // Phone number normalization and formatting
@@ -545,20 +549,33 @@
         onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
       };
       data.users.push(newUser);
-      saveData(data);
-      document.getElementById('new-firstname').value = '';
-      document.getElementById('new-lastname').value = '';
-      document.getElementById('new-address').value = '';
-      document.getElementById('new-city').value = '';
-      document.getElementById('new-state').value = '';
-      document.getElementById('new-zip').value = '';
-      document.getElementById('new-email').value = '';
-      document.getElementById('new-phone').value = '';
-      document.getElementById('new-username').value = '';
-      document.getElementById('new-password').value = '';
-      sendWelcomeEmail(email, username, password);
-      showToast('Pet Advocate created successfully');
-      renderAdmin();
+      try {
+        saveData(data);
+        // Verify data was saved
+        const savedData = getData();
+        if (!savedData.users.find(u => u.username === username)) {
+          throw new Error('Failed to save new pet advocate');
+        }
+        // Clear form fields
+        document.getElementById('new-firstname').value = '';
+        document.getElementById('new-lastname').value = '';
+        document.getElementById('new-address').value = '';
+        document.getElementById('new-city').value = '';
+        document.getElementById('new-state').value = '';
+        document.getElementById('new-zip').value = '';
+        document.getElementById('new-email').value = '';
+        document.getElementById('new-phone').value = '';
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-password').value = '';
+        sendWelcomeEmail(email, username, password);
+        showToast('Pet Advocate created successfully');
+        // Force immediate UI update
+        renderAdmin();
+      } catch (error) {
+        console.error('Error creating pet advocate:', error);
+        errorDiv.textContent = 'Error creating pet advocate: ' + error.message;
+        errorDiv.classList.remove('hidden');
+      }
     }
 
     function createPetAdvocateFromZapier(data) {
@@ -603,6 +620,7 @@
       appData.users.push(newUser);
       saveData(appData);
       sendWelcomeEmail(data.email, data.username, data.password);
+      renderAdmin(); // Ensure UI updates after Zapier creation
       return { success: true, message: 'Pet Advocate created successfully' };
     }
 
@@ -627,6 +645,7 @@
           saveData(data);
           sendWelcomeEmail(user.email, user.username, newPassword);
           showToast('Password updated and email sent');
+          renderAdmin();
         } else {
           showToast('User not found');
         }
@@ -809,7 +828,278 @@
         adminWarning.classList.add('hidden');
         advocateWarning.classList.add('hidden');
       }
-      if (currentUser.role === 'admin') {
+      if (currentUser && currentUser.role === 'admin') {
+        const calendarEl = document.getElementById('admin-calendar');
+        if (!adminCalendar) {
+          adminCalendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: calendarData.events.map(event => ({
+              ...event,
+              color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#ef4444')
+            })),
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            eventDidMount: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              info.el.title = `Title: ${event.title}\nStatus: ${props.status}\nStart: ${formatTime(event.start)}\nEnd: ${formatTime(event.end)}\n${props.advocateId ? `Advocate: ${props.advocateId}` : props.clientId ? `Client: ${props.clientId}` : ''}`;
+            },
+            eventContent: function(info) {
+              const event = info.event;
+              const props = event.extendedProps;
+              return {
+                html: `<div class="flex items-center">
+                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-red-200 text-red-800'}">${props.status}</span>
+                  <span class="ml-1">${event.title}</span>
+                </div>`
+              };
+            },
+            eventClick: function(info) {
+              const event = calendarData.events.find(e => e.id === info.event.id);
+              if (!event) return;
+              showModal(`Edit or delete event "${event.title}"?`, () => {
+                const newTitle = prompt('Edit event title:', event.title);
+                const newStatus = prompt('Edit status (available/booked/completed):', event.status);
+                if (newTitle && newStatus) {
+                  event.title = newTitle;
+                  event.status = newStatus;
+                  saveLocalEvent(event);
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  showToast('Event updated');
+                }
+              }, () => {
+                showModal(`Delete event ${info.event.title}?`, () => {
+                  calendarData.events = calendarData.events.filter(e => e.id !== info.event.id);
+                  localStorage.setItem('calendarEvents', JSON.stringify(calendarData.events));
+                  adminCalendar.refetchEvents();
+                  if (advocateCalendar) advocateCalendar.refetchEvents();
+                  showToast('Event deleted');
+                });
+              });
+            },
+          });
+        }
+        adminCalendar.removeAllEvents();
+        adminCalendar.addEventSource(calendarData.events.map(event => ({
+.pe-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+      };
+      appData.users.push(newUser);
+      saveData(appData);
+      sendWelcomeEmail(data.email, data.username, data.password);
+      renderAdmin(); // Ensure UI updates after Zapier creation
+      return { success: true, message: 'Pet Advocate created successfully' };
+    }
+
+    function updateOnboarding(userId, task) {
+      const data = getData();
+      const user = data.users.find(u => u.id === userId);
+      if (user && user.onboarding) {
+        user.onboarding[task] = !user.onboarding[task];
+        saveData(data);
+        renderAdmin();
+        console.log(`Onboarding task '${task}' for user ${userId} set to ${user.onboarding[task]}`);
+      }
+    }
+
+    function updatePassword(userId) {
+      const newPassword = prompt(`Enter new password for user ${userId}:`);
+      if (newPassword) {
+        const data = getData();
+        const user = data.users.find(u => u.id === userId);
+        if (user) {
+          user.password = btoa(newPassword);
+          saveData(data);
+          sendWelcomeEmail(user.email, user.username, newPassword);
+          showToast('Password updated and email sent');
+          renderAdmin();
+        } else {
+          showToast('User not found');
+        }
+      }
+    }
+
+    function submitServiceReport() {
+      const scheduleId = document.getElementById('report-schedule').value;
+      const petName = document.getElementById('report-pet-name').value;
+      const startTime = document.getElementById('report-start-time').value;
+      const endTime = document.getElementById('report-end-time').value;
+      const pee = document.getElementById('report-pee').value;
+      const poop = document.getElementById('report-poop').value;
+      const serviceType = document.getElementById('service-type').value;
+      const notes = document.getElementById('service-notes').value;
+      const errorDiv = document.getElementById('report-error');
+      const data = getData();
+      if (!scheduleId || !petName || !startTime || !endTime || !pee || !poop) {
+        errorDiv.textContent = 'Please fill in all required fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      if (endDate <= startDate) {
+        errorDiv.textContent = 'End time must be after start time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const schedule = calendarData.events.find(e => e.id === scheduleId);
+      data.reports.push({
+        id: `rep${data.reports.length + 1}`,
+        scheduleId,
+        advocateId: currentUser.id,
+        petName,
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        duration: calculateDuration(startTime, endTime),
+        pee,
+        poop,
+        serviceType,
+        notes,
+        timestamp: new Date().toISOString()
+      });
+      schedule.status = 'completed';
+      schedule.color = '#6b7280';
+      saveLocalEvent(schedule);
+      saveData(data);
+      document.getElementById('report-schedule').value = '';
+      document.getElementById('report-pet-name').value = '';
+      document.getElementById('report-start-time').value = '';
+      document.getElementById('report-end-time').value = '';
+      document.getElementById('report-pee').value = 'Yes';
+      document.getElementById('report-poop').value = 'Yes';
+      document.getElementById('service-type').value = '20 Minute Walk';
+      document.getElementById('service-notes').value = '';
+      showToast('Service report submitted');
+      renderPetAdvocate();
+    }
+
+    function setAvailability() {
+      const date = document.getElementById('advocate-date').value;
+      const time = document.getElementById('advocate-time').value;
+      const errorDiv = document.getElementById('availability-error');
+      if (!date || !time) {
+        errorDiv.textContent = 'Please select a date and time';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      const start = `${date}T${time}:00`;
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+      const event = {
+        id: `event${Date.now()}`,
+        title: `Available: ${currentUser.firstName}`,
+        start,
+        end: end.toISOString(),
+        advocateId: currentUser.id,
+        clientId: null,
+        status: 'available',
+        public: true,
+      };
+      saveLocalEvent(event);
+      showToast('Availability set');
+      document.getElementById('advocate-date').value = '';
+      document.getElementById('advocate-time').value = '';
+      renderPetAdvocate();
+    }
+
+    function exportCalendarData() {
+      try {
+        const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const blob = new Blob([JSON.stringify({ events: localEvents }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'calendar-data.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showToast('Failed to export calendar data: ' + error.message);
+      }
+    }
+
+    function importCalendarData() {
+      const fileInput = document.getElementById('import-data');
+      const file = fileInput.files[0];
+      if (!file) {
+        showToast('Please select a file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          localStorage.setItem('calendarEvents', JSON.stringify(importedData.events));
+          loadCalendarData();
+          showToast('Calendar data imported successfully');
+        } catch (err) {
+          showToast('Invalid JSON data');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportToCSV() {
+      try {
+        const data = getData();
+        const headers = ['ID', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip Code', 'Email', 'Phone', 'Username', 'Role', 'Proposal', 'Background Check', '1099', 'E-verify', 'Photo'];
+        const rows = data.users.map(u => [
+          u.id,
+          u.firstName,
+          u.lastName,
+          u.address || '',
+          u.city || '',
+          u.state || '',
+          u.zip || '',
+          u.email || '',
+          u.phone || '',
+          u.username,
+          u.role,
+          u.onboarding?.proposal ? 'Completed' : 'Pending',
+          u.onboarding?.backgroundCheck ? 'Completed' : 'Pending',
+          u.onboarding?.['1099'] ? 'Completed' : 'Pending',
+          u.onboarding?.everify ? 'Completed' : 'Pending',
+          u.onboarding?.photo ? 'Completed' : 'Pending',
+        ].map(field => `"${field.toString().replace(/"/g, '""')}"`));
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.join(','))
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'pet_advocates.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showToast('Failed to export CSV: ' + error.message);
+      }
+    }
+
+    function renderCalendars() {
+      console.log('Rendering calendars with events:', calendarData.events);
+      const adminWarning = document.getElementById('calendar-warning');
+      const advocateWarning = document.getElementById('advocate-calendar-warning');
+      if (!calendarData.events.length) {
+        console.warn('No events to render in calendar');
+        adminWarning.classList.remove('hidden');
+        advocateWarning.classList.remove('hidden');
+        return;
+      } else {
+        adminWarning.classList.add('hidden');
+        advocateWarning.classList.add('hidden');
+      }
+      if (currentUser && currentUser.role === 'admin') {
         const calendarEl = document.getElementById('admin-calendar');
         if (!adminCalendar) {
           adminCalendar = new FullCalendar.Calendar(calendarEl, {
@@ -874,7 +1164,7 @@
                                 '#ef4444')
         })));
         adminCalendar.render();
-      } else {
+      } else if (currentUser) {
         const calendarEl = document.getElementById('advocate-calendar');
         const filteredEvents = calendarData.events.filter(event =>
           event.advocateId === currentUser.id ||
@@ -902,157 +1192,4 @@
             eventContent: function(info) {
               const event = info.event;
               const props = event.extendedProps;
-              return {
-                html: `<div class="flex items-center">
-                  <span class="text-xs font-semibold px-1 py-0.5 rounded ${props.status === 'available' && props.clientId ? 'bg-orange-200 text-orange-800' : props.status === 'booked' ? 'bg-green-200 text-green-800' : props.status === 'completed' ? 'bg-gray-200 text-gray-800' : 'bg-blue-200 text-blue-800'}">${props.status}</span>
-                  <span class="ml-1">${event.title}</span>
-                </div>`
-              };
-            },
-            eventClick: function(info) {
-              const event = calendarData.events.find(e => e.id === info.event.id);
-              if (!event) return;
-              if (event.advocateId === currentUser.id && event.status === 'booked') {
-                showModal(`Cancel booked event: ${info.event.title}?`, () => {
-                  event.status = 'available';
-                  event.advocateId = null;
-                  saveLocalEvent(event);
-                  advocateCalendar.refetchEvents();
-                  renderPetAdvocate();
-                  showToast('Event cancelled');
-                });
-              } else if (event.status === 'available' && event.clientId && !event.advocateId) {
-                showModal(`Accept client request: ${info.event.title}?`, () => {
-                  event.status = 'booked';
-                  event.advocateId = currentUser.id;
-                  saveLocalEvent(event);
-                  advocateCalendar.refetchEvents();
-                  renderPetAdvocate();
-                  showToast('Client request accepted');
-                });
-              }
-            },
-          });
-        }
-        advocateCalendar.removeAllEvents();
-        advocateCalendar.addEventSource(filteredEvents.map(event => ({
-          ...event,
-          color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                event.status === 'booked' ? '#22c55e' :
-                                event.status === 'completed' ? '#6b7280' :
-                                '#3b82f6')
-        })));
-        advocateCalendar.render();
-      }
-    }
-
-    function renderAdmin() {
-      const data = getData();
-      const reportsList = document.getElementById('admin-reports');
-      const usersList = document.getElementById('admin-users');
-      reportsList.innerHTML = '';
-      usersList.innerHTML = '';
-      data.reports.forEach(r => {
-        const advocate = data.users.find(u => u.id === r.advocateId);
-        const schedule = calendarData.events.find(e => e.id === r.scheduleId);
-        reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">
-            🐾 Leashed Walk Report Card 🐾<br>
-            Pet: ${r.petName}<br>
-            Service: ${r.serviceType}<br>
-            Advocate: ${advocate ? `${advocate.firstName} ${advocate.lastName}` : 'Unknown'}<br>
-            Start: ${r.startTime}<br>
-            End: ${r.endTime}<br>
-            Duration: ${r.duration}<br>
-            Pee: ${r.pee}<br>
-            Poop: ${r.poop}<br>
-            Notes: ${r.notes}<br>
-            Time: ${formatTime(r.timestamp)}
-          </li>
-        `;
-      });
-      data.users.filter(u => u.role === 'pet-advocate').forEach(u => {
-        usersList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">
-            <div>${u.firstName} ${u.lastName}, ${u.address}, ${u.city}, ${u.state} ${u.zip}, Email: ${u.email}, Phone: ${u.phone}, Username: ${u.username}</div>
-            <div class="mt-2 flex flex-wrap gap-4">
-              <label class="flex items-center">
-                <input type="checkbox" ${u.onboarding?.proposal ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'proposal')" class="mr-1"> Proposal
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" ${u.onboarding?.backgroundCheck ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'backgroundCheck')" class="mr-1"> Background Check
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" ${u.onboarding?.['1099'] ? 'checked' : ''} onchange="updateOnboarding('${u.id}', '1099')" class="mr-1"> 1099
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" ${u.onboarding?.everify ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'everify')" class="mr-1"> E-verify
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" ${u.onboarding?.photo ? 'checked' : ''} onchange="updateOnboarding('${u.id}', 'photo')" class="mr-1"> Photo
-              </label>
-              <button class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 text-sm" onclick="updatePassword('${u.id}')">Update Password</button>
-            </div>
-          </li>
-        `;
-      });
-    }
-
-    function renderPetAdvocate() {
-      const data = getData();
-      const reportsList = document.getElementById('advocate-reports');
-      const onboardingList = document.getElementById('onboarding-list');
-      const scheduleSelect = document.getElementById('report-schedule');
-      reportsList.innerHTML = '';
-      onboardingList.innerHTML = '';
-      scheduleSelect.innerHTML = '<option value="">Select Schedule</option>';
-      const tasks = [
-        { key: 'proposal', label: 'Proposal Completed' },
-        { key: 'backgroundCheck', label: 'Background Check Completed' },
-        { key: '1099', label: '1099 Completed' },
-        { key: 'everify', label: 'E-verify Completed' },
-        { key: 'photo', label: 'Photo Completed' },
-      ];
-      tasks.forEach(task => {
-        const status = currentUser.onboarding?.[task.key] ? task.label : `${task.label.split(' ')[0]} Pending`;
-        onboardingList.innerHTML += `
-          <li class="p-2 border-b border-gray-200 ${currentUser?.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
-        `;
-      });
-      const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status === 'booked');
-      console.log('Schedules for service report:', schedules);
-      schedules.forEach(s => {
-        scheduleSelect.innerHTML += `<option value="${s.id}">${s.title}, ${formatTime(s.start)}</option>`;
-      });
-      data.reports.filter(r => r.advocateId === currentUser.id).forEach(r => {
-        reportsList.innerHTML += `
-          <li class="p-2 border-b border-gray-200">
-            🐾 Leashed Walk Report Card 🐾<br>
-            Pet: ${r.petName}<br>
-            Service: ${r.serviceType}<br>
-            Start: ${r.startTime}<br>
-            End: ${r.endTime}<br>
-            Duration: ${r.duration}<br>
-            Pee: ${r.pee}<br>
-            Poop: ${r.poop}<br>
-            Notes: ${r.notes}<br>
-            Time: ${formatTime(r.timestamp)}<br>
-            Thank you for trusting me with ${r.petName}'s adventures! 🐾<br>
-            Looking forward to our next walk! And as a friendly reminder, this same attentive care is always here for them should you need sitting for any future travels.
-          </li>
-        `;
-      });
-      renderCalendars();
-    }
-
-    // Initialize
-    initializeData();
-    showSection('login');
-
-    // Simulated Zapier webhook endpoint (in a real implementation, this would be a server endpoint)
-    // Example usage: POST to this endpoint with JSON payload containing user data
-    // For demonstration, you can test it in the console like this:
-    // createPetAdvocateFromZapier({ firstName: 'Jane', lastName: 'Smith', address: '789 Oak St', city: 'Somewhere', state: 'TX', zip: '54321', email: 'jane.smith@example.com', phone: '555-555-5555', username: 'janesmith', password: 'jane123' });
-  </script>
-</body>
-</html>
+              return
