@@ -268,7 +268,23 @@
     function getData() {
       try {
         const data = JSON.parse(localStorage.getItem('advocateData') || '{}');
-        if (!data.users) {
+        if (!data.users || !Array.isArray(data.users)) {
+          console.warn('Invalid or missing users array in localStorage, reinitializing');
+          initializeData();
+          return JSON.parse(localStorage.getItem('advocateData') || '{}');
+        }
+        // Filter out invalid user objects
+        data.users = data.users.filter(u => 
+          u && 
+          typeof u === 'object' && 
+          u.id && 
+          u.username && 
+          typeof u.username === 'string' && 
+          u.email && 
+          typeof u.email === 'string'
+        );
+        if (!data.users.length) {
+          console.warn('No valid users found after filtering, reinitializing');
           initializeData();
           return JSON.parse(localStorage.getItem('advocateData') || '{}');
         }
@@ -291,7 +307,7 @@
       } catch (error) {
         console.error('Failed to save data to localStorage:', error);
         showToast('Error saving data: ' + error.message);
-        throw error; // Re-throw to allow calling function to handle
+        throw error;
       }
     }
 
@@ -488,7 +504,7 @@
         }
 
         const user = data.users.find(
-          u => u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
+          u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === username.toLowerCase() && u.password === btoa(password)
         );
 
         if (user) {
@@ -579,13 +595,17 @@
           throw new Error('No user data found in localStorage');
         }
 
-        if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        // Log user data for debugging
+        console.log('Current users:', data.users);
+
+        // Check for duplicate username and email with validation
+        if (data.users.some(u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === username.toLowerCase())) {
           errorDiv.textContent = 'Username already exists';
           errorDiv.classList.remove('hidden');
           return;
         }
 
-        if (data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        if (data.users.some(u => u.email && typeof u.email === 'string' && u.email.toLowerCase() === email.toLowerCase())) {
           errorDiv.textContent = 'Email already exists';
           errorDiv.classList.remove('hidden');
           return;
@@ -652,11 +672,11 @@
         return { success: false, error: 'Invalid phone number format. Please provide a 10-digit phone number.' };
       }
       const appData = getData();
-      if (appData.users.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
+      if (appData.users.some(u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === data.username.toLowerCase())) {
         console.error('Username already exists:', data.username);
         return { success: false, error: 'Username already exists' };
       }
-      if (appData.users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
+      if (appData.users.some(u => u.email && typeof u.email === 'string' && u.email.toLowerCase() === data.email.toLowerCase())) {
         console.error('Email already exists:', data.email);
         return { success: false, error: 'Email already exists' };
       }
