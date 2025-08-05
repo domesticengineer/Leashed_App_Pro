@@ -112,7 +112,7 @@
           <label for="new-password" class="block text-gray-700">Password</label>
           <input id="new-password" type="password" placeholder="Password" class="w-full p-2 border border-gray-300 rounded-md" required>
         </div>
-        <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600" onclick="createPetAdvocate()">Create Pet Advocate</button>
+        <button id="create-advocate-button" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" onclick="createPetAdvocate()">Create Pet Advocate</button>
       </div>
       <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Master Calendar</h2>
@@ -283,9 +283,15 @@
     function saveData(data) {
       try {
         localStorage.setItem('advocateData', JSON.stringify(data));
+        // Verify data was saved correctly
+        const savedData = JSON.parse(localStorage.getItem('advocateData') || '{}');
+        if (!savedData.users || savedData.users.length !== data.users.length) {
+          throw new Error('Data verification failed after saving');
+        }
       } catch (error) {
         console.error('Failed to save data to localStorage:', error);
         showToast('Error saving data: ' + error.message);
+        throw error; // Re-throw to allow calling function to handle
       }
     }
 
@@ -524,19 +530,26 @@
     }
 
     function createPetAdvocate() {
-      const firstName = document.getElementById('new-firstname').value;
-      const lastName = document.getElementById('new-lastname').value;
-      const address = document.getElementById('new-address').value;
-      const city = document.getElementById('new-city').value;
-      const state = document.getElementById('new-state').value;
-      const zip = document.getElementById('new-zip').value;
-      const email = document.getElementById('new-email').value;
-      let phone = document.getElementById('new-phone').value;
-      const username = document.getElementById('new-username').value;
-      const password = document.getElementById('new-password').value;
+      const createButton = document.getElementById('create-advocate-button');
       const errorDiv = document.getElementById('advocate-error');
-      const data = getData();
+      
+      // Clear previous error
+      errorDiv.classList.add('hidden');
+      errorDiv.textContent = '';
 
+      // Get and trim input values
+      const firstName = document.getElementById('new-firstname').value.trim();
+      const lastName = document.getElementById('new-lastname').value.trim();
+      const address = document.getElementById('new-address').value.trim();
+      const city = document.getElementById('new-city').value.trim();
+      const state = document.getElementById('new-state').value.trim();
+      const zip = document.getElementById('new-zip').value.trim();
+      const email = document.getElementById('new-email').value.trim();
+      let phone = document.getElementById('new-phone').value.trim();
+      const username = document.getElementById('new-username').value.trim();
+      const password = document.getElementById('new-password').value;
+
+      // Validate inputs
       if (!firstName || !lastName || !address || !city || !state || !zip || !email || !phone || !username || !password) {
         errorDiv.textContent = 'Please fill in all fields';
         errorDiv.classList.remove('hidden');
@@ -556,41 +569,48 @@
         return;
       }
 
-      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-        errorDiv.textContent = 'Username already exists';
-        errorDiv.classList.remove('hidden');
-        return;
-      }
+      // Disable button and show loading state
+      createButton.disabled = true;
+      createButton.textContent = 'Creating...';
 
-      if (data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-        errorDiv.textContent = 'Email already exists';
-        errorDiv.classList.remove('hidden');
-        return;
-      }
-
-      errorDiv.classList.add('hidden');
-      const newUser = {
-        id: `advocate${data.users.length + 1}`,
-        firstName,
-        lastName,
-        address,
-        city,
-        state,
-        zip,
-        email,
-        phone,
-        username,
-        password: btoa(password),
-        role: 'pet-advocate',
-        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
-      };
-      data.users.push(newUser);
       try {
-        saveData(data);
-        const savedData = getData();
-        if (!savedData.users.find(u => u.username === username)) {
-          throw new Error('Failed to save new pet advocate');
+        const data = getData();
+        if (!data || !data.users) {
+          throw new Error('No user data found in localStorage');
         }
+
+        if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+          errorDiv.textContent = 'Username already exists';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        if (data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+          errorDiv.textContent = 'Email already exists';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        const newUser = {
+          id: `advocate${data.users.length + 1}`,
+          firstName,
+          lastName,
+          address,
+          city,
+          state,
+          zip,
+          email,
+          phone,
+          username,
+          password: btoa(password),
+          role: 'pet-advocate',
+          onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+        };
+
+        data.users.push(newUser);
+        saveData(data);
+
+        // Clear form fields
         document.getElementById('new-firstname').value = '';
         document.getElementById('new-lastname').value = '';
         document.getElementById('new-address').value = '';
@@ -601,6 +621,7 @@
         document.getElementById('new-phone').value = '';
         document.getElementById('new-username').value = '';
         document.getElementById('new-password').value = '';
+
         sendWelcomeEmail(email, username, password);
         showToast('Pet Advocate created successfully');
         renderAdmin();
@@ -608,6 +629,10 @@
         console.error('Error creating pet advocate:', error);
         errorDiv.textContent = 'Error creating pet advocate: ' + error.message;
         errorDiv.classList.remove('hidden');
+      } finally {
+        // Re-enable button and restore text
+        createButton.disabled = false;
+        createButton.textContent = 'Create Pet Advocate';
       }
     }
 
