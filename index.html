@@ -9,7 +9,7 @@
   <style>
     .fc {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #eneuve
+      background-color: #fff;
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
@@ -248,15 +248,18 @@
   <script>
     // Initialize data
     function initializeData() {
-      const defaultData = {
-        users: [
-          { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', email: 'admin@example.com', phone: '123-456-7890', username: 'admin', password: btoa('admin123'), role: 'admin' },
-          { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', email: 'john.doe@example.com', phone: '987-654-3210', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
-        ],
-        schedules: [],
-        reports: [],
-      };
-      localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      const existingData = localStorage.getItem('advocateData');
+      if (!existingData) {
+        const defaultData = {
+          users: [
+            { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', email: 'admin@example.com', phone: '123-456-7890', username: 'admin', password: btoa('admin123'), role: 'admin' },
+            { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', email: 'john.doe@example.com', phone: '987-654-3210', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
+          ],
+          schedules: [],
+          reports: [],
+        };
+        localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      }
       if (!localStorage.getItem('calendarEvents')) {
         localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
@@ -266,49 +269,11 @@
       try {
         const data = JSON.parse(localStorage.getItem('advocateData') || '{}');
         if (!data.users || !Array.isArray(data.users)) {
-          console.warn('Invalid or missing users array in localStorage, reinitializing');
           initializeData();
           return JSON.parse(localStorage.getItem('advocateData') || '{}');
-        }
-        // Filter out invalid user objects
-        data.users = data.users.filter(u =>
-          u &&
-          typeof u === 'object' &&
-          u.id &&
-          u.username &&
-          typeof u.username === 'string' &&
-          u.email &&
-          typeof u.email === 'string' &&
-          u.password &&
-          typeof u.password === 'string'
-        );
-        if (!data.users.length) {
-          console.warn('No valid users found after filtering, reinitializing');
-          initializeData();
-          return JSON.parse(localStorage.getItem('advocateData') || '{}');
-        }
-        // Ensure default admin user exists
-        if (!data.users.some(u => u.username === 'admin' && u.role === 'admin')) {
-          console.warn('Default admin user missing, adding');
-          data.users.push({
-            id: 'admin1',
-            firstName: 'Admin',
-            lastName: 'User',
-            address: '123 Main St',
-            city: 'Anytown',
-            state: 'CA',
-            zip: '12345',
-            email: 'admin@example.com',
-            phone: '123-456-7890',
-            username: 'admin',
-            password: btoa('admin123'),
-            role: 'admin'
-          });
-          localStorage.setItem('advocateData', JSON.stringify(data));
         }
         return data;
       } catch (error) {
-        console.error('Error reading localStorage:', error);
         initializeData();
         return JSON.parse(localStorage.getItem('advocateData') || '{}');
       }
@@ -316,7 +281,6 @@
     function saveData(data) {
       try {
         localStorage.setItem('advocateData', JSON.stringify(data));
-        // Verify data was saved correctly
         const savedData = JSON.parse(localStorage.getItem('advocateData') || '{}');
         if (!savedData.users || savedData.users.length !== data.users.length) {
           throw new Error('Data verification failed after saving');
@@ -516,7 +480,6 @@
           currentUser = user;
           document.getElementById('username').value = '';
           document.getElementById('password').value = '';
-         
           if (user.role === 'admin') {
             showSection('admin');
             loadCalendarData();
@@ -552,11 +515,8 @@
     function createPetAdvocate() {
       const createButton = document.getElementById('create-advocate-button');
       const errorDiv = document.getElementById('advocate-error');
-     
-      // Clear previous error
       errorDiv.classList.add('hidden');
       errorDiv.textContent = '';
-      // Get and trim input values
       const firstName = document.getElementById('new-firstname').value.trim();
       const lastName = document.getElementById('new-lastname').value.trim();
       const address = document.getElementById('new-address').value.trim();
@@ -567,7 +527,6 @@
       let phone = document.getElementById('new-phone').value.trim();
       const username = document.getElementById('new-username').value.trim();
       const password = document.getElementById('new-password').value;
-      // Validate inputs
       if (!firstName || !lastName || !address || !city || !state || !zip || !email || !phone || !username || !password) {
         errorDiv.textContent = 'Please fill in all fields';
         errorDiv.classList.remove('hidden');
@@ -584,7 +543,6 @@
         errorDiv.classList.remove('hidden');
         return;
       }
-      // Disable button and show loading state
       createButton.disabled = true;
       createButton.textContent = 'Creating...';
       try {
@@ -592,9 +550,7 @@
         if (!data || !data.users) {
           throw new Error('No user data found in localStorage');
         }
-        // Log user data for debugging
         console.log('Current users:', data.users);
-        // Check for duplicate username and email with validation
         if (data.users.some(u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === username.toLowerCase())) {
           errorDiv.textContent = 'Username already exists';
           errorDiv.classList.remove('hidden');
@@ -622,7 +578,6 @@
         };
         data.users.push(newUser);
         saveData(data);
-        // Clear form fields
         document.getElementById('new-firstname').value = '';
         document.getElementById('new-lastname').value = '';
         document.getElementById('new-address').value = '';
@@ -641,7 +596,6 @@
         errorDiv.textContent = 'Error creating pet advocate: ' + error.message;
         errorDiv.classList.remove('hidden');
       } finally {
-        // Re-enable button and restore text
         createButton.disabled = false;
         createButton.textContent = 'Create Pet Advocate';
       }
@@ -1101,7 +1055,7 @@
         tasks.forEach(task => {
           const status = currentUser.onboarding?.[task.key] ? task.label : `${task.label.split(' ')[0]} Pending`;
           onboardingList.innerHTML += `
-            <li class="p-2 border-b border-gray-200 ${currentUser?.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
+            <li class="p-2 border-b border-gray-200 ${currentUser.onboarding?.[task.key] ? 'text-green-600' : 'text-gray-600'}">${status}</li>
           `;
         });
         const schedules = calendarData.events.filter(e => e.advocateId === currentUser.id && e.status === 'booked');
