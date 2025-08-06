@@ -9,7 +9,7 @@
   <style>
     .fc {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #fff;
+      background-color: #eneuve
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
@@ -327,29 +327,6 @@
         throw error;
       }
     }
-    // Cleanup expired users
-    function cleanupExpiredUsers() {
-      try {
-        const data = getData();
-        const now = Date.now();
-        const expiryTime = 5 * 60 * 1000; // 5 minutes in milliseconds
-        // Filter out users (except advocate1) that have expired
-        data.users = data.users.filter(u => {
-          if (u.id === 'advocate1') return true; // Keep John Doe static
-          if (!u.createdAt) return true; // Keep users without createdAt (e.g., admin)
-          return now - u.createdAt < expiryTime;
-        });
-        saveData(data);
-        if (currentUser && currentUser.id !== 'advocate1' && currentUser.createdAt && now - currentUser.createdAt >= expiryTime) {
-          handleLogout(); // Log out if current user is expired
-          showToast('Your session has expired');
-        }
-        renderAdmin(); // Update the Pet Advocates list
-      } catch (error) {
-        console.error('Error cleaning up expired users:', error);
-        showToast('Error cleaning up expired users');
-      }
-    }
     const CALENDAR_DATA_URL = '/calendar-data.json';
     let calendarData = { events: [] };
     let currentUser = null;
@@ -641,8 +618,7 @@
           username,
           password: btoa(password),
           role: 'pet-advocate',
-          onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false },
-          createdAt: Date.now() // Add timestamp for dynamic users
+          onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
         };
         data.users.push(newUser);
         saveData(data);
@@ -707,8 +683,7 @@
         username: data.username,
         password: btoa(data.password),
         role: 'pet-advocate',
-        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false },
-        createdAt: Date.now() // Add timestamp for Zapier-created users
+        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
       };
       appData.users.push(newUser);
       saveData(appData);
@@ -1161,8 +1136,6 @@
     // Initialize
     initializeData();
     showSection('login');
-    // Start cleanup interval (every 30 seconds)
-    setInterval(cleanupExpiredUsers, 30 * 1000);
   </script>
 </body>
 </html>
