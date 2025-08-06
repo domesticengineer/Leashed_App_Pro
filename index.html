@@ -261,7 +261,6 @@
         localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
     }
-
     // Data access
     function getData() {
       try {
@@ -272,15 +271,15 @@
           return JSON.parse(localStorage.getItem('advocateData') || '{}');
         }
         // Filter out invalid user objects
-        data.users = data.users.filter(u => 
-          u && 
-          typeof u === 'object' && 
-          u.id && 
-          u.username && 
-          typeof u.username === 'string' && 
-          u.email && 
-          typeof u.email === 'string' && 
-          u.password && 
+        data.users = data.users.filter(u =>
+          u &&
+          typeof u === 'object' &&
+          u.id &&
+          u.username &&
+          typeof u.username === 'string' &&
+          u.email &&
+          typeof u.email === 'string' &&
+          u.password &&
           typeof u.password === 'string'
         );
         if (!data.users.length) {
@@ -314,7 +313,6 @@
         return JSON.parse(localStorage.getItem('advocateData') || '{}');
       }
     }
-
     function saveData(data) {
       try {
         localStorage.setItem('advocateData', JSON.stringify(data));
@@ -329,20 +327,40 @@
         throw error;
       }
     }
-
+    // Cleanup expired users
+    function cleanupExpiredUsers() {
+      try {
+        const data = getData();
+        const now = Date.now();
+        const expiryTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+        // Filter out users (except advocate1) that have expired
+        data.users = data.users.filter(u => {
+          if (u.id === 'advocate1') return true; // Keep John Doe static
+          if (!u.createdAt) return true; // Keep users without createdAt (e.g., admin)
+          return now - u.createdAt < expiryTime;
+        });
+        saveData(data);
+        if (currentUser && currentUser.id !== 'advocate1' && currentUser.createdAt && now - currentUser.createdAt >= expiryTime) {
+          handleLogout(); // Log out if current user is expired
+          showToast('Your session has expired');
+        }
+        renderAdmin(); // Update the Pet Advocates list
+      } catch (error) {
+        console.error('Error cleaning up expired users:', error);
+        showToast('Error cleaning up expired users');
+      }
+    }
     const CALENDAR_DATA_URL = '/calendar-data.json';
     let calendarData = { events: [] };
     let currentUser = null;
     let adminCalendar = null;
     let advocateCalendar = null;
-
     function showToast(message) {
       const toast = document.getElementById('toast');
       document.getElementById('toast-message').textContent = message;
       toast.classList.remove('hidden');
       setTimeout(() => toast.classList.add('hidden'), 3000);
     }
-
     function showModal(message, onConfirm) {
       const modal = document.getElementById('modal');
       document.getElementById('modal-message').textContent = message;
@@ -353,7 +371,6 @@
       document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
       modal.classList.remove('hidden');
     }
-
     function formatTime(isoString) {
       const date = new Date(isoString);
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -363,7 +380,6 @@
       const minutes = date.getMinutes().toString().padStart(2, '0');
       return `${month}-${day}-${year} ${hours}:${minutes}`;
     }
-
     function calculateDuration(start, end) {
       const startDate = new Date(start);
       const endDate = new Date(end);
@@ -371,12 +387,10 @@
       const diffMins = Math.round(diffMs / 60000);
       return `${diffMins} minutes`;
     }
-
     function sendWelcomeEmail(email, username, password) {
       console.log(`Simulated email sent to ${email} with username: ${username} and password: ${password}`);
       showToast(`Welcome email sent to ${email}`);
     }
-
     function normalizePhoneNumber(phone) {
       const digits = phone.replace(/\D/g, '');
       if (digits.length === 10) {
@@ -384,7 +398,6 @@
       }
       return null;
     }
-
     function formatPhoneNumber(input) {
       let value = input.value.replace(/\D/g, '');
       if (value.length > 10) value = value.slice(0, 10);
@@ -396,7 +409,6 @@
         input.value = value;
       }
     }
-
     function loadCalendarData() {
       console.log('Loading calendar data...');
       fetch(CALENDAR_DATA_URL)
@@ -424,7 +436,6 @@
           renderCalendars();
         });
     }
-
     function saveLocalEvent(event) {
       const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
       const existingIndex = localEvents.findIndex(e => e.id === event.id);
@@ -445,7 +456,6 @@
       console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
       loadCalendarData();
     }
-
     function addRequestedEvent() {
       const event = {
         id: `event${Date.now()}`,
@@ -460,7 +470,6 @@
       saveLocalEvent(event);
       showToast('Added "Client Request: Sample Pet" for 2025-08-01 10:00 AM');
     }
-
     function addClientRequest() {
       const petName = document.getElementById('client-title').value;
       const date = document.getElementById('client-date').value;
@@ -491,55 +500,46 @@
       document.getElementById('client-date').value = '';
       document.getElementById('client-time').value = '';
     }
-
     function showSection(sectionId) {
       ['login', 'admin', 'pet-advocate'].forEach(id => {
         document.getElementById(id).classList.toggle('hidden', id !== sectionId);
       });
     }
-
     function handleLogin() {
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       const errorDiv = document.getElementById('login-error');
       const loginButton = document.getElementById('login-button');
-
       errorDiv.classList.add('hidden');
       errorDiv.textContent = '';
-
       if (!username || !password) {
         errorDiv.textContent = 'Please provide username and password';
         errorDiv.classList.remove('hidden');
         return;
       }
-
       loginButton.disabled = true;
       loginButton.textContent = 'Logging in...';
-
       try {
         const data = getData();
         if (!data || !data.users) {
           throw new Error('No user data found in localStorage');
         }
-
         console.log('Users in localStorage:', data.users);
         console.log('Input username:', username);
         console.log('Input password (encoded):', btoa(password));
-
         const user = data.users.find(
-          u => u.username && 
-               typeof u.username === 'string' && 
-               u.password && 
-               typeof u.password === 'string' && 
-               u.username.toLowerCase() === username.toLowerCase() && 
+          u => u.username &&
+               typeof u.username === 'string' &&
+               u.password &&
+               typeof u.password === 'string' &&
+               u.username.toLowerCase() === username.toLowerCase() &&
                u.password === btoa(password)
         );
-
         if (user) {
           currentUser = user;
           document.getElementById('username').value = '';
           document.getElementById('password').value = '';
-          
+         
           if (user.role === 'admin') {
             showSection('admin');
             loadCalendarData();
@@ -564,7 +564,6 @@
         loginButton.textContent = 'Login';
       }
     }
-
     function handleLogout() {
       currentUser = null;
       showSection('login');
@@ -573,15 +572,13 @@
       adminCalendar = null;
       advocateCalendar = null;
     }
-
     function createPetAdvocate() {
       const createButton = document.getElementById('create-advocate-button');
       const errorDiv = document.getElementById('advocate-error');
-      
+     
       // Clear previous error
       errorDiv.classList.add('hidden');
       errorDiv.textContent = '';
-
       // Get and trim input values
       const firstName = document.getElementById('new-firstname').value.trim();
       const lastName = document.getElementById('new-lastname').value.trim();
@@ -593,53 +590,44 @@
       let phone = document.getElementById('new-phone').value.trim();
       const username = document.getElementById('new-username').value.trim();
       const password = document.getElementById('new-password').value;
-
       // Validate inputs
       if (!firstName || !lastName || !address || !city || !state || !zip || !email || !phone || !username || !password) {
         errorDiv.textContent = 'Please fill in all fields';
         errorDiv.classList.remove('hidden');
         return;
       }
-
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         errorDiv.textContent = 'Please enter a valid email address';
         errorDiv.classList.remove('hidden');
         return;
       }
-
       phone = normalizePhoneNumber(phone);
       if (!phone) {
         errorDiv.textContent = 'Please enter a valid 10-digit phone number (e.g., 123-456-7890)';
         errorDiv.classList.remove('hidden');
         return;
       }
-
       // Disable button and show loading state
       createButton.disabled = true;
       createButton.textContent = 'Creating...';
-
       try {
         const data = getData();
         if (!data || !data.users) {
           throw new Error('No user data found in localStorage');
         }
-
         // Log user data for debugging
         console.log('Current users:', data.users);
-
         // Check for duplicate username and email with validation
         if (data.users.some(u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === username.toLowerCase())) {
           errorDiv.textContent = 'Username already exists';
           errorDiv.classList.remove('hidden');
           return;
         }
-
         if (data.users.some(u => u.email && typeof u.email === 'string' && u.email.toLowerCase() === email.toLowerCase())) {
           errorDiv.textContent = 'Email already exists';
           errorDiv.classList.remove('hidden');
           return;
         }
-
         const newUser = {
           id: `advocate${data.users.length + 1}`,
           firstName,
@@ -653,12 +641,11 @@
           username,
           password: btoa(password),
           role: 'pet-advocate',
-          onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+          onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false },
+          createdAt: Date.now() // Add timestamp for dynamic users
         };
-
         data.users.push(newUser);
         saveData(data);
-
         // Clear form fields
         document.getElementById('new-firstname').value = '';
         document.getElementById('new-lastname').value = '';
@@ -670,7 +657,6 @@
         document.getElementById('new-phone').value = '';
         document.getElementById('new-username').value = '';
         document.getElementById('new-password').value = '';
-
         sendWelcomeEmail(email, username, password);
         showToast('Pet Advocate created successfully');
         renderAdmin();
@@ -684,7 +670,6 @@
         createButton.textContent = 'Create Pet Advocate';
       }
     }
-
     function createPetAdvocateFromZapier(data) {
       const requiredFields = ['firstName', 'lastName', 'address', 'city', 'state', 'zip', 'email', 'phone', 'username', 'password'];
       if (!requiredFields.every(field => data[field])) {
@@ -722,7 +707,8 @@
         username: data.username,
         password: btoa(data.password),
         role: 'pet-advocate',
-        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false },
+        createdAt: Date.now() // Add timestamp for Zapier-created users
       };
       appData.users.push(newUser);
       saveData(appData);
@@ -730,7 +716,6 @@
       renderAdmin();
       return { success: true, message: 'Pet Advocate created successfully' };
     }
-
     function updateOnboarding(userId, task) {
       const data = getData();
       const user = data.users.find(u => u.id === userId);
@@ -741,7 +726,6 @@
         console.log(`Onboarding task '${task}' for user ${userId} set to ${user.onboarding[task]}`);
       }
     }
-
     function updatePassword(userId) {
       const newPassword = prompt(`Enter new password for user ${userId}:`);
       if (newPassword) {
@@ -758,7 +742,6 @@
         }
       }
     }
-
     function submitServiceReport() {
       const scheduleId = document.getElementById('report-schedule').value;
       const petName = document.getElementById('report-pet-name').value;
@@ -813,7 +796,6 @@
       showToast('Service report submitted');
       renderPetAdvocate();
     }
-
     function setAvailability() {
       const date = document.getElementById('advocate-date').value;
       const time = document.getElementById('advocate-time').value;
@@ -843,7 +825,6 @@
       document.getElementById('advocate-time').value = '';
       renderPetAdvocate();
     }
-
     function exportCalendarData() {
       try {
         const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
@@ -860,7 +841,6 @@
         showToast('Failed to export calendar data: ' + error.message);
       }
     }
-
     function importCalendarData() {
       const fileInput = document.getElementById('import-data');
       const file = fileInput.files[0];
@@ -881,7 +861,6 @@
       };
       reader.readAsText(file);
     }
-
     function exportToCSV() {
       try {
         const data = getData();
@@ -921,7 +900,6 @@
         showToast('Failed to export CSV: ' + error.message);
       }
     }
-
     function renderCalendars() {
       console.log('Rendering calendars with events:', calendarData.events);
       const adminWarning = document.getElementById('calendar-warning');
@@ -1063,7 +1041,6 @@
         advocateCalendar.render();
       }
     }
-
     function renderAdmin() {
       try {
         const data = getData();
@@ -1125,7 +1102,6 @@
         showToast('Error rendering admin dashboard: ' + error.message);
       }
     }
-
     function renderPetAdvocate() {
       try {
         const data = getData();
@@ -1182,10 +1158,11 @@
         showToast('Error rendering pet advocate dashboard: ' + error.message);
       }
     }
-
     // Initialize
     initializeData();
     showSection('login');
+    // Start cleanup interval (every 30 seconds)
+    setInterval(cleanupExpiredUsers, 30 * 1000);
   </script>
 </body>
 </html>
