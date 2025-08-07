@@ -10,10 +10,7 @@ app.use(express.json());
 
 // Connect to Vercel Postgres
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString: process.env.POSTGRES_URL + "?sslmode=require",
 });
 
 // Create users table if it doesn't exist
