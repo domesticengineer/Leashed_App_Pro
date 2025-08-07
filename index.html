@@ -246,10 +246,30 @@
     </div>
   </div>
   <script>
+    // Server URL for user data (replace with your actual server endpoint)
+    const USER_DATA_URL = '/api/users.json';
+    
     // Initialize data
-    function initializeData() {
-      const existingData = localStorage.getItem('advocateData');
-      if (!existingData) {
+    async function initializeData() {
+      try {
+        const response = await fetch(USER_DATA_URL);
+        if (!response.ok) throw new Error('Failed to fetch user data');
+        const data = await response.json();
+        if (!data.users || !Array.isArray(data.users)) {
+          const defaultData = {
+            users: [
+              { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', email: 'admin@example.com', phone: '123-456-7890', username: 'admin', password: btoa('admin123'), role: 'admin' },
+              { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', email: 'john.doe@example.com', phone: '987-654-3210', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
+            ],
+            schedules: [],
+            reports: [],
+          };
+          await saveData(defaultData);
+          return defaultData;
+        }
+        return data;
+      } catch (error) {
+        console.warn('Error fetching initial data, using default:', error);
         const defaultData = {
           users: [
             { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', email: 'admin@example.com', phone: '123-456-7890', username: 'admin', password: btoa('admin123'), role: 'admin' },
@@ -258,50 +278,60 @@
           schedules: [],
           reports: [],
         };
-        localStorage.setItem('advocateData', JSON.stringify(defaultData));
-      }
-      if (!localStorage.getItem('calendarEvents')) {
-        localStorage.setItem('calendarEvents', JSON.stringify([]));
+        await saveData(defaultData);
+        return defaultData;
       }
     }
+
     // Data access
-    function getData() {
+    async function getData() {
       try {
-        const data = JSON.parse(localStorage.getItem('advocateData') || '{}');
+        const response = await fetch(USER_DATA_URL);
+        if (!response.ok) throw new Error('Failed to fetch user data');
+        const data = await response.json();
         if (!data.users || !Array.isArray(data.users)) {
-          initializeData();
-          return JSON.parse(localStorage.getItem('advocateData') || '{}');
+          return await initializeData();
         }
         return data;
       } catch (error) {
-        initializeData();
-        return JSON.parse(localStorage.getItem('advocateData') || '{}');
+        console.error('Failed to fetch data:', error);
+        showToast('Error fetching data: ' + error.message);
+        return await initializeData();
       }
     }
-    function saveData(data) {
+
+    async function saveData(data) {
       try {
-        localStorage.setItem('advocateData', JSON.stringify(data));
-        const savedData = JSON.parse(localStorage.getItem('advocateData') || '{}');
+        const response = await fetch(USER_DATA_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to save user data');
+        const savedData = await response.json();
         if (!savedData.users || savedData.users.length !== data.users.length) {
           throw new Error('Data verification failed after saving');
         }
       } catch (error) {
-        console.error('Failed to save data to localStorage:', error);
+        console.error('Failed to save data:', error);
         showToast('Error saving data: ' + error.message);
         throw error;
       }
     }
+
     const CALENDAR_DATA_URL = '/calendar-data.json';
     let calendarData = { events: [] };
     let currentUser = null;
     let adminCalendar = null;
     let advocateCalendar = null;
+
     function showToast(message) {
       const toast = document.getElementById('toast');
       document.getElementById('toast-message').textContent = message;
       toast.classList.remove('hidden');
       setTimeout(() => toast.classList.add('hidden'), 3000);
     }
+
     function showModal(message, onConfirm) {
       const modal = document.getElementById('modal');
       document.getElementById('modal-message').textContent = message;
@@ -312,6 +342,7 @@
       document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
       modal.classList.remove('hidden');
     }
+
     function formatTime(isoString) {
       const date = new Date(isoString);
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -321,6 +352,7 @@
       const minutes = date.getMinutes().toString().padStart(2, '0');
       return `${month}-${day}-${year} ${hours}:${minutes}`;
     }
+
     function calculateDuration(start, end) {
       const startDate = new Date(start);
       const endDate = new Date(end);
@@ -328,10 +360,12 @@
       const diffMins = Math.round(diffMs / 60000);
       return `${diffMins} minutes`;
     }
+
     function sendWelcomeEmail(email, username, password) {
       console.log(`Simulated email sent to ${email} with username: ${username} and password: ${password}`);
       showToast(`Welcome email sent to ${email}`);
     }
+
     function normalizePhoneNumber(phone) {
       const digits = phone.replace(/\D/g, '');
       if (digits.length === 10) {
@@ -339,6 +373,7 @@
       }
       return null;
     }
+
     function formatPhoneNumber(input) {
       let value = input.value.replace(/\D/g, '');
       if (value.length > 10) value = value.slice(0, 10);
@@ -350,6 +385,7 @@
         input.value = value;
       }
     }
+
     function loadCalendarData() {
       console.log('Loading calendar data...');
       fetch(CALENDAR_DATA_URL)
@@ -377,6 +413,7 @@
           renderCalendars();
         });
     }
+
     function saveLocalEvent(event) {
       const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
       const existingIndex = localEvents.findIndex(e => e.id === event.id);
@@ -397,6 +434,7 @@
       console.log(`Saved event: ${event.status} ${event.id} for ${event.start}`);
       loadCalendarData();
     }
+
     function addRequestedEvent() {
       const event = {
         id: `event${Date.now()}`,
@@ -411,6 +449,7 @@
       saveLocalEvent(event);
       showToast('Added "Client Request: Sample Pet" for 2025-08-01 10:00 AM');
     }
+
     function addClientRequest() {
       const petName = document.getElementById('client-title').value;
       const date = document.getElementById('client-date').value;
@@ -441,12 +480,14 @@
       document.getElementById('client-date').value = '';
       document.getElementById('client-time').value = '';
     }
+
     function showSection(sectionId) {
       ['login', 'admin', 'pet-advocate'].forEach(id => {
         document.getElementById(id).classList.toggle('hidden', id !== sectionId);
       });
     }
-    function handleLogin() {
+
+    async function handleLogin() {
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       const errorDiv = document.getElementById('login-error');
@@ -461,11 +502,11 @@
       loginButton.disabled = true;
       loginButton.textContent = 'Logging in...';
       try {
-        const data = getData();
+        const data = await getData();
         if (!data || !data.users) {
-          throw new Error('No user data found in localStorage');
+          throw new Error('No user data found');
         }
-        console.log('Users in localStorage:', data.users);
+        console.log('Users fetched:', data.users);
         console.log('Input username:', username);
         console.log('Input password (encoded):', btoa(password));
         const user = data.users.find(
@@ -504,6 +545,7 @@
         loginButton.textContent = 'Login';
       }
     }
+
     function handleLogout() {
       currentUser = null;
       showSection('login');
@@ -512,7 +554,8 @@
       adminCalendar = null;
       advocateCalendar = null;
     }
-    function createPetAdvocate() {
+
+    async function createPetAdvocate() {
       const createButton = document.getElementById('create-advocate-button');
       const errorDiv = document.getElementById('advocate-error');
       errorDiv.classList.add('hidden');
@@ -546,9 +589,9 @@
       createButton.disabled = true;
       createButton.textContent = 'Creating...';
       try {
-        const data = getData();
+        const data = await getData();
         if (!data || !data.users) {
-          throw new Error('No user data found in localStorage');
+          throw new Error('No user data found');
         }
         console.log('Current users:', data.users);
         if (data.users.some(u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === username.toLowerCase())) {
@@ -577,7 +620,7 @@
           onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
         };
         data.users.push(newUser);
-        saveData(data);
+        await saveData(data);
         document.getElementById('new-firstname').value = '';
         document.getElementById('new-lastname').value = '';
         document.getElementById('new-address').value = '';
@@ -600,7 +643,8 @@
         createButton.textContent = 'Create Pet Advocate';
       }
     }
-    function createPetAdvocateFromZapier(data) {
+
+    async function createPetAdvocateFromZapier(data) {
       const requiredFields = ['firstName', 'lastName', 'address', 'city', 'state', 'zip', 'email', 'phone', 'username', 'password'];
       if (!requiredFields.every(field => data[field])) {
         console.error('Missing required fields in Zapier data:', data);
@@ -615,7 +659,7 @@
         console.error('Invalid phone number in Zapier data:', data.phone);
         return { success: false, error: 'Invalid phone number format. Please provide a 10-digit phone number.' };
       }
-      const appData = getData();
+      const appData = await getData();
       if (appData.users.some(u => u.username && typeof u.username === 'string' && u.username.toLowerCase() === data.username.toLowerCase())) {
         console.error('Username already exists:', data.username);
         return { success: false, error: 'Username already exists' };
@@ -640,29 +684,31 @@
         onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
       };
       appData.users.push(newUser);
-      saveData(appData);
+      await saveData(appData);
       sendWelcomeEmail(data.email, data.username, data.password);
       renderAdmin();
       return { success: true, message: 'Pet Advocate created successfully' };
     }
-    function updateOnboarding(userId, task) {
-      const data = getData();
+
+    async function updateOnboarding(userId, task) {
+      const data = await getData();
       const user = data.users.find(u => u.id === userId);
       if (user && user.onboarding) {
         user.onboarding[task] = !user.onboarding[task];
-        saveData(data);
+        await saveData(data);
         renderAdmin();
         console.log(`Onboarding task '${task}' for user ${userId} set to ${user.onboarding[task]}`);
       }
     }
-    function updatePassword(userId) {
+
+    async function updatePassword(userId) {
       const newPassword = prompt(`Enter new password for user ${userId}:`);
       if (newPassword) {
-        const data = getData();
+        const data = await getData();
         const user = data.users.find(u => u.id === userId);
         if (user) {
           user.password = btoa(newPassword);
-          saveData(data);
+          await saveData(data);
           sendWelcomeEmail(user.email, user.username, newPassword);
           showToast('Password updated and email sent');
           renderAdmin();
@@ -671,7 +717,8 @@
         }
       }
     }
-    function submitServiceReport() {
+
+    async function submitServiceReport() {
       const scheduleId = document.getElementById('report-schedule').value;
       const petName = document.getElementById('report-pet-name').value;
       const startTime = document.getElementById('report-start-time').value;
@@ -681,7 +728,7 @@
       const serviceType = document.getElementById('service-type').value;
       const notes = document.getElementById('service-notes').value;
       const errorDiv = document.getElementById('report-error');
-      const data = getData();
+      const data = await getData();
       if (!scheduleId || !petName || !startTime || !endTime || !pee || !poop) {
         errorDiv.textContent = 'Please fill in all required fields';
         errorDiv.classList.remove('hidden');
@@ -713,7 +760,7 @@
       schedule.status = 'completed';
       schedule.color = '#6b7280';
       saveLocalEvent(schedule);
-      saveData(data);
+      await saveData(data);
       document.getElementById('report-schedule').value = '';
       document.getElementById('report-pet-name').value = '';
       document.getElementById('report-start-time').value = '';
@@ -725,6 +772,7 @@
       showToast('Service report submitted');
       renderPetAdvocate();
     }
+
     function setAvailability() {
       const date = document.getElementById('advocate-date').value;
       const time = document.getElementById('advocate-time').value;
@@ -754,6 +802,7 @@
       document.getElementById('advocate-time').value = '';
       renderPetAdvocate();
     }
+
     function exportCalendarData() {
       try {
         const localEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
@@ -770,6 +819,7 @@
         showToast('Failed to export calendar data: ' + error.message);
       }
     }
+
     function importCalendarData() {
       const fileInput = document.getElementById('import-data');
       const file = fileInput.files[0];
@@ -790,9 +840,10 @@
       };
       reader.readAsText(file);
     }
-    function exportToCSV() {
+
+    async function exportToCSV() {
       try {
-        const data = getData();
+        const data = await getData();
         const headers = ['ID', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip Code', 'Email', 'Phone', 'Username', 'Role', 'Proposal', 'Background Check', '1099', 'E-verify', 'Photo'];
         const rows = data.users.map(u => [
           u.id,
@@ -829,6 +880,7 @@
         showToast('Failed to export CSV: ' + error.message);
       }
     }
+
     function renderCalendars() {
       console.log('Rendering calendars with events:', calendarData.events);
       const adminWarning = document.getElementById('calendar-warning');
@@ -970,9 +1022,10 @@
         advocateCalendar.render();
       }
     }
-    function renderAdmin() {
+
+    async function renderAdmin() {
       try {
-        const data = getData();
+        const data = await getData();
         const reportsList = document.getElementById('admin-reports');
         const usersList = document.getElementById('admin-users');
         if (!reportsList || !usersList) {
@@ -1031,9 +1084,10 @@
         showToast('Error rendering admin dashboard: ' + error.message);
       }
     }
-    function renderPetAdvocate() {
+
+    async function renderPetAdvocate() {
       try {
-        const data = getData();
+        const data = await getData();
         const reportsList = document.getElementById('advocate-reports');
         const onboardingList = document.getElementById('onboarding-list');
         const scheduleSelect = document.getElementById('report-schedule');
@@ -1087,9 +1141,12 @@
         showToast('Error rendering pet advocate dashboard: ' + error.message);
       }
     }
+
     // Initialize
-    initializeData();
-    showSection('login');
+    (async () => {
+      await initializeData();
+      showSection('login');
+    })();
   </script>
 </body>
 </html>
