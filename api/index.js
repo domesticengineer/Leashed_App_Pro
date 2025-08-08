@@ -1,3 +1,7 @@
+const express = require('express');
+const app = express();// ✅ This is Step 1
+app.use(express.json());
+
 // Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
