@@ -1,14 +1,19 @@
-{
-  "name": "pet-advocate-backend",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "node api/index.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "cors": "^2.8.5",
-    "pg": "^8.12.0",
-    "bcrypt": "^5.1.1",
-    "jsonwebtoken": "^9.0.2"
-  }
+// hash.js
+
+const bcrypt = require('bcrypt');
+
+// Hash a password
+async function hashPassword(password) {
+  const saltRounds = 10;
+  return await bcrypt.hash(password, saltRounds);
 }
+
+// Compare a password with a hash
+async function verifyPassword(password, hash) {
+  return await bcrypt.compare(password, hash);
+}
+
+module.exports = {
+  hashPassword,
+  verifyPassword
+};
