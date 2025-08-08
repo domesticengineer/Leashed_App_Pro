@@ -2,6 +2,14 @@ const express = require('express');
 const app = express();// ✅ This is Step 1
 app.use(express.json());
 
+// Middleware to parse JSON
+app.use(express.json());
+
+// 🔍 Health check route
+app.get('/ping', (req, res) => {
+  res.send('pong');
+});
+
 // Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -41,4 +49,7 @@ app.post('/api/login', async (req, res) => {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error during login" });
   }
+}); app.listen(3000, () => {
+  console.log('Server is running on port 3000');
 });
+
