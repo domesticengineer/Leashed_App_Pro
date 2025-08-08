@@ -58,6 +58,7 @@
         try {
             const data = await apiRequest('/login', 'POST', { username, password });
             currentUser = data.user;
+            alert("Logged in as: " + currentUser.role);
             
             if (currentUser.role === 'admin') {
                 showSection('admin');
