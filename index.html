@@ -144,6 +144,15 @@
         } catch (error) {
             // Error is already shown by apiRequest
         }
+           // Load calendar data (from your calendar-data.json or DB)
+          const calendarEl = document.getElementById('admin-calendar');
+          if (calendarEl) {
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+              initialView: 'dayGridMonth',
+              events: '/api/events'  // You'd need to implement /api/events.js to fetch from DB or JSON
+          });
+          calendar.render();
+}
     }
     
     // --- Initial Load ---
