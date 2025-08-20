@@ -92,7 +92,18 @@
             errorDiv.classList.remove('hidden');
             return;
         }
-
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newUser.email)) {
+             errorDiv.textContent = 'Invalid email format.';
+             errorDiv.classList.remove('hidden');
+             return;
+        }
+        const phoneRegex = /^\d{3}-\d{3}-\d{4}$/;
+        if (!phoneRegex.test(newUser.phone)) {
+            errorDiv.textContent = 'Phone must be in XXX-XXX-XXXX format.';
+            errorDiv.classList.remove('hidden');
+             return;
+        }
         try {
             await apiRequest('/register', 'POST', newUser);
             showToast('Pet Advocate created successfully');
