@@ -152,6 +152,43 @@
               events: '/api/events'  // You'd need to implement /api/events.js to fetch from DB or JSON
           });
           calendar.render();
+
+            async function renderAdvocateDashboard() {
+  // Existing code...
+  // Add section for pending requests
+  try {
+    const pendingRequests = await apiRequest('/requests');
+    const requestsList = document.createElement('ul'); // Or use existing div
+    requestsList.innerHTML = '';
+    pendingRequests.forEach(req => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <div>
+          <p>${req.service_type} for ${req.client_name} on ${req.preferred_date} at ${req.preferred_time}</p>
+          <button onclick="acceptRequest(${req.id})">Accept</button>
+        </div>
+      `;
+      requestsList.appendChild(li);
+    });
+    document.getElementById('advocate-content').appendChild(requestsList); // Adjust ID as needed
+  } catch (err) {}
+
+  // Add section for accepted requests
+  try {
+    const accepted = await apiRequest(`/requests?userId=${currentUser.id}`);
+    // Similar list display...
+  } catch (err) {}
+}
+
+async function acceptRequest(reqId) {
+  try {
+    await apiRequest('/accept-request', 'POST', { id: reqId, userId: currentUser.id });
+    renderAdvocateDashboard(); // Refresh
+    showToast('Request accepted', 'success');
+  } catch (err) {
+    showToast('Accept failed', 'error');
+  }
+}
 }
     }
     
