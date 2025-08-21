@@ -37,7 +37,7 @@
 
     <div id="calendar" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
 
-    <div id="admin" class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div id="admin" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
       <h2 class="text-xl font-semibold mb-4">Admin Dashboard</h2>
       <div id="request-list"></div>
     </div>
@@ -64,6 +64,7 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Login failed');
         showToast('Login successful');
+        document.getElementById('admin').classList.remove('hidden');
       } catch (error) {
         showToast(error.message);
       }
