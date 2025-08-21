@@ -1,161 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pet Advocate Portal</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-  <style>
-    .fc {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-  </style>
-</head>
-<body class="bg-gray-100 p-4">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">Pet Advocate Portal</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pet Advocate Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <style>
+      .fc {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 p-4">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-6">Pet Advocate Portal</h1>
 
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-      <h2 class="text-xl font-semibold mb-4">Login</h2>
-      <form id="login-form">
-        <input type="text" id="username" placeholder="Username" class="border p-2 mb-2 w-full" />
-        <input type="password" id="password" placeholder="Password" class="border p-2 mb-2 w-full" />
-        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
-      </form>
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Login</h2>
+        <form id="login-form">
+          <input type="text" id="username" placeholder="Username" class="border p-2 mb-2 w-full" />
+          <input type="password" id="password" placeholder="Password" class="border p-2 mb-2 w-full" />
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+        </form>
+        <div id="login-error" class="text-red-500 mt-2"></div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Pet Advocate Form</h2>
+        <form id="advocate-form">
+          <input type="text" id="name" placeholder="Name" class="border p-2 mb-2 w-full" />
+          <input type="email" id="email" placeholder="Email" class="border p-2 mb-2 w-full" />
+          <input type="tel" id="phone" placeholder="Phone (e.g. 123-456-7890)" class="border p-2 mb-2 w-full" />
+          <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Submit</button>
+        </form>
+        <div id="form-error" class="text-red-500 mt-2"></div>
+      </div>
+
+      <div id="admin-calendar" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
+
+      <div id="advocate-content" class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Pet Advocates</h2>
+        <ul id="advocate-list" class="list-disc pl-5"></ul>
+      </div>
+
+      <div id="advocate-requests" class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Service Requests</h2>
+        <div id="request-list"></div>
+      </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-      <h2 class="text-xl font-semibold mb-4">Pet Advocate Form</h2>
-      <form id="advocate-form">
-        <input type="text" id="name" placeholder="Name" class="border p-2 mb-2 w-full" />
-        <input type="email" id="email" placeholder="Email" class="border p-2 mb-2 w-full" />
-        <input type="tel" id="phone" placeholder="Phone (e.g. 123-456-7890)" class="border p-2 mb-2 w-full" />
-        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Submit</button>
-      </form>
-    </div>
+    <script>
+      const API_BASE_URL = 'https://your-backend-url.com';
 
-    <div id="calendar" class="bg-white rounded-lg shadow-md p-6 mb-6"></div>
+      function showToast(message, isError = false) {
+        alert(message);
+      }
 
-    <div id="admin" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
-      <h2 class="text-xl font-semibold mb-4">Admin Dashboard</h2>
-      <div id="request-list"></div>
-    </div>
-  </div>
+      async function apiRequest(endpoint, options = {}) {
+        try {
+          const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'An API error occurred');
+          return data;
+        } catch (error) {
+          showToast(error.message, true);
+          throw error;
+        }
+      }
 
-  <script>
-    const API_BASE_URL = 'https://your-backend-url.com';
-
-    function showToast(message) {
-      alert(message);
-    }
-
-    async function handleLogin(event) {
-      event.preventDefault();
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
+      function showSection(sectionId) {
+        const sections = ['login-form', 'advocate-form', 'admin-calendar', 'advocate-content', 'advocate-requests'];
+        sections.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.parentElement.style.display = id === sectionId ? 'block' : 'none';
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Login failed');
-        showToast('Login successful');
-        document.getElementById('admin').classList.remove('hidden');
-      } catch (error) {
-        showToast(error.message);
-      }
-    }
-
-    async function handleAdvocateSubmit(event) {
-      event.preventDefault();
-      const name = document.getElementById('name').value;
-      const email = document.getElementById('email').value;
-      const phone = document.getElementById('phone').value;
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /^\d{3}-\d{3}-\d{4}$/;
-
-      if (!emailRegex.test(email)) {
-        showToast('Invalid email format');
-        return;
       }
 
-      if (!phoneRegex.test(phone)) {
-        showToast('Invalid phone format');
-        return;
+      async function handleLogin() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+          const data = await apiRequest('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          showToast('Login successful');
+          showSection('advocate-form');
+        } catch (error) {
+          document.getElementById('login-error').textContent = error.message;
+        }
       }
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/advocates`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone })
+      async function handleAdvocateSubmit() {
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^\d{3}-\d{3}-\d{4}$/;
+
+        if (!emailRegex.test(email)) {
+          document.getElementById('form-error').textContent = 'Invalid email format';
+          return;
+        }
+
+        if (!phoneRegex.test(phone)) {
+          document.getElementById('form-error').textContent = 'Invalid phone format';
+          return;
+        }
+
+        try {
+          await apiRequest('/advocates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone })
+          });
+          showToast('Advocate submitted successfully');
+          ['name', 'email', 'phone'].forEach(id => {
+            document.getElementById(id).value = '';
+          });
+          document.getElementById('form-error').textContent = '';
+        } catch (error) {
+          document.getElementById('form-error').textContent = error.message;
+        }
+      }
+
+      async function acceptRequest(reqId) {
+        try {
+          await apiRequest(`/requests/${reqId}/accept`, { method: 'POST' });
+          showToast('Request accepted');
+        } catch (error) {
+          showToast(error.message, true);
+        }
+      }
+
+      function renderAdvocateList(users) {
+        const list = document.getElementById('advocate-list');
+        list.innerHTML = '';
+        if (!users.length) {
+          list.innerHTML = '<li>No pet advocates have been created.</li>';
+          return;
+        }
+        users.forEach(u => {
+          const li = document.createElement('li');
+          li.textContent = `${u.firstName} ${u.lastName} (${u.username})`;
+          list.appendChild(li);
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Submission failed');
-        showToast('Advocate submitted successfully');
-        ['name', 'email', 'phone'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
-      } catch (error) {
-        showToast(error.message);
       }
-    }
 
-    async function acceptRequest(requestId) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/requests/${requestId}/accept`, {
-          method: 'POST'
+      function renderRequests(requests) {
+        const container = document.getElementById('request-list');
+        container.innerHTML = '';
+        requests.forEach(req => {
+          const div = document.createElement('div');
+          div.className = 'border p-2 mb-2';
+          div.innerHTML = `
+            <p><strong>${req.petName}</strong> (${req.serviceType})</p>
+            <button class="bg-purple-500 text-white px-2 py-1 rounded" onclick="acceptRequest('${req.id}')">Accept</button>
+          `;
+          container.appendChild(div);
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Request acceptance failed');
-        showToast('Request accepted');
-      } catch (error) {
-        showToast(error.message);
       }
-    }
 
-    function renderCalendar() {
-      const calendarEl = document.getElementById('calendar');
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth'
+      async function loadDashboard() {
+        try {
+          const users = await apiRequest('/advocates');
+          renderAdvocateList(users);
+          const requests = await apiRequest('/requests');
+          renderRequests(requests);
+        } catch (error) {
+          showToast('Failed to load dashboard', true);
+        }
+      }
+
+      document.getElementById('login-form').addEventListener('submit', e => {
+        e.preventDefault();
+        handleLogin();
       });
-      calendar.render();
-    }
 
-    function renderAdvocateDashboard(requests) {
-      const container = document.getElementById('request-list');
-      container.innerHTML = '';
-      requests.forEach(req => {
-        const div = document.createElement('div');
-        div.className = 'border p-2 mb-2';
-        div.innerHTML = `
-          <p><strong>${req.name}</strong> (${req.email})</p>
-          <button class="bg-purple-500 text-white px-2 py-1 rounded" onclick="acceptRequest('${req.id}')">Accept</button>
-        `;
-        container.appendChild(div);
+      document.getElementById('advocate-form').addEventListener('submit', e => {
+        e.preventDefault();
+        handleAdvocateSubmit();
       });
-    }
 
-    async function fetchRequests() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/requests`);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Failed to fetch requests');
-        renderAdvocateDashboard(data);
-      } catch (error) {
-        showToast(error.message);
-      }
-    }
-
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('advocate-form').addEventListener('submit', handleAdvocateSubmit);
-    renderCalendar();
-    fetchRequests();
-  </script>
-</body>
+      document.addEventListener('DOMContentLoaded', () => {
+        showSection('login-form');
+        const calendarEl = document.getElementById('admin-calendar');
+        if (calendarEl) {
+          const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth'
+          });
+          calendar.render();
+        }
+      });
+    </script>
+  </body>
 </html>
