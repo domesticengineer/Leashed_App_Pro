@@ -245,17 +245,13 @@
         users: [
           { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
           { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
-	 { id: 'advocate2', firstName: 'Danni', lastName: 'Byrd', address: 'Street', city: 'City', state: 'CA', zip: '00000', username: '843920174621', password: btoa('Byrd2025!'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } }
-
+          { id: 'advocate2', firstName: 'Danni', lastName: 'Byrd', address: 'Street', city: 'City', state: 'CA', zip: '00000', username: '843920174621', password: btoa('Byrd2025!'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } }
         ],
         schedules: [],
         reports: [],
       };
       if (!localStorage.getItem('advocateData')) {
         localStorage.setItem('advocateData', JSON.stringify(defaultData));
-      }
-      if (!localStorage.getItem('calendarEvents')) {
-        localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
     }
 
@@ -710,9 +706,9 @@
             events: calendarData.events.map(event => ({
               ...event,
               color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                    event.status === 'booked' ? '#22c55e' :
-                                    event.status === 'completed' ? '#6b7280' :
-                                    '#ef4444')
+                                      event.status === 'booked' ? '#22c55e' :
+                                      event.status === 'completed' ? '#6b7280' :
+                                      '#ef4444')
             })),
             headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
             slotMinTime: '08:00:00',
@@ -762,9 +758,9 @@
         adminCalendar.addEventSource(calendarData.events.map(event => ({
           ...event,
           color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                event.status === 'booked' ? '#22c55e' :
-                                event.status === 'completed' ? '#6b7280' :
-                                '#ef4444')
+                                  event.status === 'booked' ? '#22c55e' :
+                                  event.status === 'completed' ? '#6b7280' :
+                                  '#ef4444')
         })));
         adminCalendar.render();
       } else {
@@ -780,9 +776,9 @@
             events: filteredEvents.map(event => ({
               ...event,
               color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                    event.status === 'booked' ? '#22c55e' :
-                                    event.status === 'completed' ? '#6b7280' :
-                                    '#3b82f6')
+                                      event.status === 'booked' ? '#22c55e' :
+                                      event.status === 'completed' ? '#6b7280' :
+                                      '#3b82f6')
             })),
             headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
             slotMinTime: '08:00:00',
@@ -831,9 +827,9 @@
         advocateCalendar.addEventSource(filteredEvents.map(event => ({
           ...event,
           color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                event.status === 'booked' ? '#22c55e' :
-                                event.status === 'completed' ? '#6b7280' :
-                                '#3b82f6')
+                                  event.status === 'booked' ? '#22c55e' :
+                                  event.status === 'completed' ? '#6b7280' :
+                                  '#3b82f6')
         })));
         advocateCalendar.render();
       }
