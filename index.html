@@ -245,13 +245,17 @@
         users: [
           { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
           { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
-          { id: 'advocate2', firstName: 'Danni', lastName: 'Byrd', address: 'Street', city: 'City', state: 'CA', zip: '00000', username: '843920174621', password: btoa('DRyb2025'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } }
+          { id: 'advocate2', firstName: 'Danni', lastName: 'Byrd', address: 'Street', city: 'City', state: 'CA', zip: '00000', username: '843920174621', password: btoa('Byrd2025!'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } }
         ],
         schedules: [],
         reports: [],
       };
-      if (!localStorage.getItem('advocateData')) {
-        localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      // **FIXED**: This now ALWAYS sets the localStorage from the hard-coded list above.
+      // This ensures that opening the file on any device loads the correct, permanent user list.
+      localStorage.setItem('advocateData', JSON.stringify(defaultData));
+      
+      if (!localStorage.getItem('calendarEvents')) {
+        localStorage.setItem('calendarEvents', JSON.stringify([]));
       }
     }
 
@@ -281,7 +285,7 @@
       const modal = document.getElementById('modal');
       document.getElementById('modal-message').textContent = message;
       document.getElementById('modal-confirm').onclick = () => {
-        onConfirm();
+        if (onConfirm) onConfirm();
         modal.classList.add('hidden');
       };
       document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
@@ -940,3 +944,4 @@
   </script>
 </body>
 </html>
+
