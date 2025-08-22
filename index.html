@@ -245,6 +245,8 @@
         users: [
           { id: 'admin1', firstName: 'Admin', lastName: 'User', address: '123 Main St', city: 'Anytown', state: 'CA', zip: '12345', username: 'admin', password: btoa('admin123'), role: 'admin' },
           { id: 'advocate1', firstName: 'John', lastName: 'Doe', address: '456 Elm St', city: 'Othertown', state: 'NY', zip: '67890', username: 'advocate1', password: btoa('advocate123'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } },
+	 { id: 'advocate2', firstName: 'Danni', lastName: 'Byrd', address: 'Street', city: 'City', state: 'CA', zip: '00000', username: '843920174621', password: btoa('Byrd2025!'), role: 'pet-advocate', onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false } }
+
         ],
         schedules: [],
         reports: [],
@@ -448,78 +450,52 @@
       advocateCalendar = null;
     }
 
-    /**
-     * **FIXED**: This function now correctly saves the new pet advocate
-     * to the same persistent storage as the admin user.
-    */
     function createPetAdvocate() {
-        const firstName = document.getElementById('new-firstname').value;
-        const lastName = document.getElementById('new-lastname').value;
-        const address = document.getElementById('new-address').value;
-        const city = document.getElementById('new-city').value;
-        const state = document.getElementById('new-state').value;
-        const zip = document.getElementById('new-zip').value;
-        const username = document.getElementById('new-username').value;
-        const password = document.getElementById('new-password').value;
-        const errorDiv = document.getElementById('advocate-error');
-
-        // --- Validation ---
-        if (!firstName || !lastName || !address || !city || !state || !zip || !username || !password) {
-            errorDiv.textContent = 'Please fill in all fields';
-            errorDiv.classList.remove('hidden');
-            return;
-        }
-        
-        // --- Data Handling ---
-        // 1. Get the complete, existing data object from storage.
-        // This object contains the list of all users, including the admin.
-        const data = getData();
-
-        // 2. Check if the username already exists to prevent duplicates.
-        if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-            errorDiv.textContent = 'Username already exists';
-            errorDiv.classList.remove('hidden');
-            return;
-        }
-
-        // 3. Create the new pet advocate user object.
-        const newAdvocate = {
-            id: `advocate${Date.now()}`, // Use timestamp for a more unique ID
-            firstName,
-            lastName,
-            address,
-            city,
-            state,
-            zip,
-            username,
-            password: btoa(password), // Encode password just like the default users
-            role: 'pet-advocate',
-            onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
-        };
-
-        // 4. Add the new advocate to the existing list of users.
-        data.users.push(newAdvocate);
-
-        // 5. Save the entire updated data object (with the new user included) back to storage.
-        // This makes the new user permanent, just like the admin.
-        saveData(data);
-        
-        // --- UI Update ---
-        errorDiv.classList.add('hidden');
-        showToast('Pet Advocate created successfully');
-
-        // Clear the form fields
-        document.getElementById('new-firstname').value = '';
-        document.getElementById('new-lastname').value = '';
-        document.getElementById('new-address').value = '';
-        document.getElementById('new-city').value = '';
-        document.getElementById('new-state').value = '';
-        document.getElementById('new-zip').value = '';
-        document.getElementById('new-username').value = '';
-        document.getElementById('new-password').value = '';
-        
-        // Refresh the admin dashboard to show the new user in the list.
-        renderAdmin();
+      const firstName = document.getElementById('new-firstname').value;
+      const lastName = document.getElementById('new-lastname').value;
+      const address = document.getElementById('new-address').value;
+      const city = document.getElementById('new-city').value;
+      const state = document.getElementById('new-state').value;
+      const zip = document.getElementById('new-zip').value;
+      const username = document.getElementById('new-username').value;
+      const password = document.getElementById('new-password').value;
+      const errorDiv = document.getElementById('advocate-error');
+      const data = getData();
+      if (!firstName || !lastName || !address || !city || !state || !zip || !username || !password) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      if (data.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        errorDiv.textContent = 'Username already exists';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+      errorDiv.classList.add('hidden');
+      data.users.push({
+        id: `advocate${data.users.length + 1}`,
+        firstName,
+        lastName,
+        address,
+        city,
+        state,
+        zip,
+        username,
+        password: btoa(password),
+        role: 'pet-advocate',
+        onboarding: { proposal: false, backgroundCheck: false, '1099': false, everify: false, photo: false }
+      });
+      saveData(data);
+      document.getElementById('new-firstname').value = '';
+      document.getElementById('new-lastname').value = '';
+      document.getElementById('new-address').value = '';
+      document.getElementById('new-city').value = '';
+      document.getElementById('new-state').value = '';
+      document.getElementById('new-zip').value = '';
+      document.getElementById('new-username').value = '';
+      document.getElementById('new-password').value = '';
+      showToast('Pet Advocate created successfully');
+      renderAdmin();
     }
 
     function updateOnboarding(userId, task) {
@@ -734,9 +710,9 @@
             events: calendarData.events.map(event => ({
               ...event,
               color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                      event.status === 'booked' ? '#22c55e' :
-                                      event.status === 'completed' ? '#6b7280' :
-                                      '#ef4444')
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#ef4444')
             })),
             headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
             slotMinTime: '08:00:00',
@@ -786,9 +762,9 @@
         adminCalendar.addEventSource(calendarData.events.map(event => ({
           ...event,
           color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                  event.status === 'booked' ? '#22c55e' :
-                                  event.status === 'completed' ? '#6b7280' :
-                                  '#ef4444')
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#ef4444')
         })));
         adminCalendar.render();
       } else {
@@ -804,9 +780,9 @@
             events: filteredEvents.map(event => ({
               ...event,
               color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                      event.status === 'booked' ? '#22c55e' :
-                                      event.status === 'completed' ? '#6b7280' :
-                                      '#3b82f6')
+                                    event.status === 'booked' ? '#22c55e' :
+                                    event.status === 'completed' ? '#6b7280' :
+                                    '#3b82f6')
             })),
             headerToolbar: { left: 'prev,next', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' },
             slotMinTime: '08:00:00',
@@ -855,9 +831,9 @@
         advocateCalendar.addEventSource(filteredEvents.map(event => ({
           ...event,
           color: event.color || (event.status === 'available' && event.clientId && !event.advocateId ? '#f97316' :
-                                  event.status === 'booked' ? '#22c55e' :
-                                  event.status === 'completed' ? '#6b7280' :
-                                  '#3b82f6')
+                                event.status === 'booked' ? '#22c55e' :
+                                event.status === 'completed' ? '#6b7280' :
+                                '#3b82f6')
         })));
         advocateCalendar.render();
       }
